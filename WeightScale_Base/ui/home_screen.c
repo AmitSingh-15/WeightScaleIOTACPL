@@ -25,7 +25,7 @@ void home_screen_create(lv_obj_t *parent)
 
     lv_obj_t *screen = lv_obj_create(parent);
     lv_obj_add_style(screen, &g_styles.screen, 0);
-    lv_obj_set_size(screen, 320, 480);
+    lv_obj_set_size(screen, 800, 480);
 
     static lv_coord_t col[] = { LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST };
     static lv_coord_t row[] = { 80, 160, 120, 80, LV_GRID_TEMPLATE_LAST };
@@ -46,7 +46,14 @@ void home_screen_create(lv_obj_t *parent)
     lbl_sync = lv_label_create(header);
     lv_label_set_text(lbl_sync, "Offline");
     lv_obj_add_style(lbl_sync, &g_styles.value, 0);
-    lv_obj_align(lbl_sync, LV_ALIGN_RIGHT_MID, 0, 0);
+    lv_obj_align(lbl_sync, LV_ALIGN_RIGHT_MID, -60, 0);
+
+    lv_obj_t *settings_btn = lv_btn_create(header);
+    lv_obj_add_style(settings_btn, &g_styles.btn_secondary, 0);
+    lv_obj_set_size(settings_btn, 40, 30);
+    lv_obj_align(settings_btn, LV_ALIGN_RIGHT_MID, -10, 0);
+    lv_obj_add_event_cb(settings_btn, btn_event_cb, LV_EVENT_CLICKED, (void*)UI_EVT_SETTINGS);
+    lv_label_set_text(lv_label_create(settings_btn), "⚙");
 
     /* Weight Card */
     lv_obj_t *weight_card = lv_obj_create(screen);
