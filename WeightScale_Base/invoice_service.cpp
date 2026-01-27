@@ -1,6 +1,6 @@
 #include "invoice_service.h"
-#include "storage/storage_service.h"
-#include "services/time_service.h"
+#include "storage_service.h"
+#include "time_service.h"
 
 static uint32_t current_invoice = 1;
 

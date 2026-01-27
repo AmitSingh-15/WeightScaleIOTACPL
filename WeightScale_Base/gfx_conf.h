@@ -1,12 +1,18 @@
 #pragma once
 
-#include <lvgl.h>
+#include <Arduino.h>
+#include <driver/i2c.h>
+
+#ifdef pinMode
+#undef pinMode
+#endif
 
 #define LGFX_USE_V1
 #include <LovyanGFX.hpp>
 #include <lgfx/v1/platforms/esp32s3/Panel_RGB.hpp>
 #include <lgfx/v1/platforms/esp32s3/Bus_RGB.hpp>
-#include <driver/i2c.h>
+
+
 
 #define screenWidth   800
 #define screenHeight  480

@@ -1,7 +1,7 @@
 #include "settings_screen.h"
 #include "ui_styles.h"
-#include "network/wifi_service.h"
-#include "ota/ota_service.h"
+#include "wifi_service.h"
+#include "ota_service.h"
 
 
 static lv_obj_t *wifi_status;

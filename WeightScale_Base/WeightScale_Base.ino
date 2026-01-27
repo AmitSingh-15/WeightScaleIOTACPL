@@ -1,29 +1,38 @@
+#define LV_CONF_INCLUDE_SIMPLE
+#include <lvgl.h>
 #include <Arduino.h>
 
 #include "gfx_conf.h"
 #include "lvgl_port.h"
 
-#include "ui/home_screen.h"
-#include "ui/settings_screen.h"
+#include "home_screen.h"
+#include "settings_screen.h"
 
-#include "services/invoice_service.h"
-#include "storage/storage_service.h"
-#include "network/wifi_service.h"
-#include "ota/ota_service.h"
+#include "invoice_service.h"
+#include "storage_service.h"
+#include "wifi_service.h"
+#include "ota_service.h"
 
-static lv_obj_t *home_scr;
-static lv_obj_t *settings_scr;
+/* ================= GLOBAL STATE ================= */
+
+static lv_obj_t *home_scr = NULL;
+static lv_obj_t *settings_scr = NULL;
 
 static uint16_t qty = 1;
 static float weight = 0.0f;
+
+/* ================= CALLBACKS ================= */
 
 static void ui_event(int evt)
 {
     if (evt == UI_EVT_SETTINGS)
         lv_scr_load(settings_scr);
 
-    if (evt == UI_EVT_QTY_INC) home_screen_set_quantity(++qty);
-    if (evt == UI_EVT_QTY_DEC && qty > 1) home_screen_set_quantity(--qty);
+    if (evt == UI_EVT_QTY_INC)
+        home_screen_set_quantity(++qty);
+
+    if (evt == UI_EVT_QTY_DEC && qty > 1)
+        home_screen_set_quantity(--qty);
 
     if (evt == UI_EVT_SAVE) {
         invoice_record_t rec;
@@ -39,6 +48,8 @@ static void back_cb(void)
 {
     lv_scr_load(home_scr);
 }
+
+/* ================= ARDUINO ================= */
 
 void setup()
 {

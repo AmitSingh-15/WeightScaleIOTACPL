@@ -1,6 +1,6 @@
 #pragma once
 #include <Arduino.h>
-#include "services/invoice_service.h"
+#include "invoice_service.h"   // needed for invoice_record_t
 
 void storage_service_init(void);
 

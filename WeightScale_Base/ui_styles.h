@@ -1,5 +1,9 @@
 #pragma once
-#include "lvgl.h"
+#include <lvgl.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct {
     lv_style_t screen;
@@ -15,3 +19,7 @@ typedef struct {
 extern ui_styles_t g_styles;
 
 void ui_styles_init(void);
+
+#ifdef __cplusplus
+}
+#endif

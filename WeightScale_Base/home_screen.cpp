@@ -1,5 +1,7 @@
 #include "home_screen.h"
 #include "ui_styles.h"
+#include "ui_events.h"
+
 
 static lv_obj_t *lbl_weight;
 static lv_obj_t *lbl_qty;

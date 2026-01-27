@@ -1,7 +1,7 @@
-#include "ota_service.h"
 #include <WiFi.h>
-#include <HTTPClient.h>
+#include <WiFiClientSecure.h>
 #include <HTTPUpdate.h>
+#include "ota_service.h"
 
 #define OTA_VERSION      "1.0.0"
 #define OTA_VERSION_URL  "https://your-server.com/firmware/version.txt"
@@ -60,7 +60,7 @@ void ota_service_check_and_update(void)
             Serial.println("[OTA] Update success, rebooting");
             break;
 
-        case HTTP_UPDATE_FAILD:
+        case HTTP_UPDATE_FAILED:
             Serial.printf("[OTA] Update failed (%d): %s\n",
                           httpUpdate.getLastError(),
                           httpUpdate.getLastErrorString().c_str());

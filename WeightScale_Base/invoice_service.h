@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
 
+
 enum entry_type_t {
     ENTRY_AUTO = 0,
     ENTRY_MANUAL = 1
@@ -26,3 +27,4 @@ bool invoice_service_save(float weight,
                           uint16_t quantity,
                           entry_type_t type,
                           invoice_record_t *out_record);
+
