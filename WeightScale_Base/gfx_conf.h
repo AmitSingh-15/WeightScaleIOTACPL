@@ -8,9 +8,6 @@
 #include <lgfx/v1/platforms/esp32s3/Bus_RGB.hpp>
 #include <driver/i2c.h>
 
-/* ===============================
-   CrowPanel 7-inch configuration
-   =============================== */
 #define screenWidth   800
 #define screenHeight  480
 
@@ -22,33 +19,31 @@ public:
     lgfx::Light_PWM   backlight;
     lgfx::Touch_GT911 touch;
 
-    LGFX(void)
+    LGFX()
     {
-        /* ---------- Panel ---------- */
+        // Panel
         {
             auto cfg = panel.config();
             cfg.memory_width  = screenWidth;
             cfg.memory_height = screenHeight;
             cfg.panel_width   = screenWidth;
             cfg.panel_height  = screenHeight;
-            cfg.offset_x      = 0;
-            cfg.offset_y      = 0;
+            cfg.offset_x = 0;
+            cfg.offset_y = 0;
             panel.config(cfg);
         }
 
-        /* ---------- RGB Bus ---------- */
+        // RGB Bus
         {
             auto cfg = bus.config();
             cfg.panel = &panel;
 
-            // Blue
             cfg.pin_d0  = GPIO_NUM_15;
             cfg.pin_d1  = GPIO_NUM_7;
             cfg.pin_d2  = GPIO_NUM_6;
             cfg.pin_d3  = GPIO_NUM_5;
             cfg.pin_d4  = GPIO_NUM_4;
 
-            // Green
             cfg.pin_d5  = GPIO_NUM_9;
             cfg.pin_d6  = GPIO_NUM_46;
             cfg.pin_d7  = GPIO_NUM_3;
@@ -56,7 +51,6 @@ public:
             cfg.pin_d9  = GPIO_NUM_16;
             cfg.pin_d10 = GPIO_NUM_1;
 
-            // Red
             cfg.pin_d11 = GPIO_NUM_14;
             cfg.pin_d12 = GPIO_NUM_21;
             cfg.pin_d13 = GPIO_NUM_47;
@@ -70,7 +64,6 @@ public:
 
             cfg.freq_write = 12000000;
 
-            // Timing (CrowPanel official)
             cfg.hsync_polarity    = 0;
             cfg.hsync_front_porch = 40;
             cfg.hsync_pulse_width = 48;
@@ -82,14 +75,12 @@ public:
             cfg.vsync_back_porch  = 13;
 
             cfg.pclk_active_neg = 1;
-            cfg.de_idle_high    = 0;
-            cfg.pclk_idle_high  = 0;
 
             bus.config(cfg);
             panel.setBus(&bus);
         }
 
-        /* ---------- Backlight ---------- */
+        // Backlight
         {
             auto cfg = backlight.config();
             cfg.pin_bl = GPIO_NUM_2;
@@ -97,24 +88,19 @@ public:
             panel.light(&backlight);
         }
 
-        /* ---------- Touch (GT911) ---------- */
+        // Touch
         {
             auto cfg = touch.config();
             cfg.x_min = 0;
             cfg.x_max = screenWidth - 1;
             cfg.y_min = 0;
             cfg.y_max = screenHeight - 1;
-
-            cfg.pin_int = -1;
-            cfg.pin_rst = -1;
-            cfg.bus_shared = true;
-
             cfg.i2c_port = I2C_NUM_1;
-            cfg.pin_sda  = GPIO_NUM_19;
-            cfg.pin_scl  = GPIO_NUM_20;
-            cfg.freq     = 400000;
+            cfg.pin_sda = GPIO_NUM_19;
+            cfg.pin_scl = GPIO_NUM_20;
             cfg.i2c_addr = 0x14;
-
+            cfg.freq = 400000;
+            cfg.bus_shared = true;
             touch.config(cfg);
             panel.setTouch(&touch);
         }

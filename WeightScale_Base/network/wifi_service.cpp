@@ -45,4 +45,10 @@ void wifi_service_loop(void)
             state = WIFI_DISCONNECTED;
         }
     }
+
+    int res = WiFi.scanComplete();
+    if (res >= 0) {
+        scan_count = res;
+    }
 }
+

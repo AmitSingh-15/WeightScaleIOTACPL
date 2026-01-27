@@ -74,6 +74,7 @@ void settings_screen_create(lv_obj_t *parent)
     lv_obj_add_style(ota_btn, &g_styles.btn_primary, 0);
     lv_obj_align(ota_btn, LV_ALIGN_TOP_LEFT, 20, 160);
     lv_obj_add_event_cb(ota_btn, ota_cb, LV_EVENT_CLICKED, NULL);
+}
 void settings_screen_update_wifi_status(void)
 {
     if (!wifi_status) return;

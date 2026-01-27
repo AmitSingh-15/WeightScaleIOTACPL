@@ -1,91 +1,81 @@
-
 #include <Arduino.h>
+
 #include "gfx_conf.h"
 #include "lvgl_port.h"
+
 #include "ui/home_screen.h"
 #include "ui/settings_screen.h"
+
 #include "services/invoice_service.h"
+#include "storage/storage_service.h"
 #include "network/wifi_service.h"
 #include "ota/ota_service.h"
 
 static lv_obj_t *home_scr;
 static lv_obj_t *settings_scr;
 
-static lv_obj_t *home_scr;
-static lv_obj_t *settings_scr;
-static uint16_t current_quantity = 1;
-static float current_weight = 0.0; // TODO: from sensor
+static uint16_t qty = 1;
+static float weight = 0.0f;
 
-static void ui_event_handler(int evt)
+static void ui_event(int evt)
 {
-    switch (evt) {
-    case UI_EVT_SETTINGS:
+    if (evt == UI_EVT_SETTINGS)
         lv_scr_load(settings_scr);
-        break;
-    case UI_EVT_QTY_INC:
-        if (current_quantity < 999) {
-            current_quantity++;
-            home_screen_set_quantity(current_quantity);
-        }
-        break;
-    case UI_EVT_QTY_DEC:
-        if (current_quantity > 1) {
-            current_quantity--;
-            home_screen_set_quantity(current_quantity);
-        }
-        break;
-    case UI_EVT_SAVE:
-        // TODO: get weight from sensor
+
+    if (evt == UI_EVT_QTY_INC) home_screen_set_quantity(++qty);
+    if (evt == UI_EVT_QTY_DEC && qty > 1) home_screen_set_quantity(--qty);
+
+    if (evt == UI_EVT_SAVE) {
         invoice_record_t rec;
-        if (invoice_service_save(current_weight, current_quantity, ENTRY_MANUAL, &rec)) {
-            invoice_service_next();
+        if (invoice_service_save(weight, qty, ENTRY_MANUAL, &rec)) {
             home_screen_set_invoice(invoice_service_current_id());
-            current_quantity = 1;
-            home_screen_set_quantity(current_quantity);
-            Serial.printf("Saved invoice %lu\n", rec.invoice_id);
+            qty = 1;
+            home_screen_set_quantity(qty);
         }
-        break;
     }
 }
 
-static void settings_back_handler(void)
+static void back_cb(void)
 {
     lv_scr_load(home_scr);
 }
 
-void setup() {
-  Serial.begin(115200);
-  lvgl_port_init();
-  invoice_service_init();
-  wifi_service_init();
-  ota_service_init();
+void setup()
+{
+    Serial.begin(115200);
 
-  home_scr = lv_obj_create(NULL);
-  settings_scr = lv_obj_create(NULL);
+    lvgl_port_init();
 
-  home_screen_create(home_scr);
-  home_screen_register_callback(ui_event_handler);
-  home_screen_set_quantity(current_quantity);
-  home_screen_set_weight(current_weight);
-  home_screen_set_invoice(invoice_service_current_id());
+    storage_service_init();
+    invoice_service_init();
+    wifi_service_init();
+    ota_service_init();
 
-  settings_screen_create(settings_scr);
-  settings_screen_register_back_callback(settings_back_handler);
+    home_scr = lv_obj_create(NULL);
+    settings_scr = lv_obj_create(NULL);
 
-  lv_scr_load(home_scr);
+    home_screen_create(home_scr);
+    home_screen_register_callback(ui_event);
+
+    settings_screen_create(settings_scr);
+    settings_screen_register_back_callback(back_cb);
+
+    home_screen_set_quantity(qty);
+    home_screen_set_weight(weight);
+    home_screen_set_invoice(invoice_service_current_id());
+
+    lv_scr_load(home_scr);
 }
 
-void loop() {
-  lvgl_port_loop();
-  wifi_service_loop();
-  invoice_service_daily_reset_if_needed();
+void loop()
+{
+    lvgl_port_loop();
+    wifi_service_loop();
+    invoice_service_daily_reset_if_needed();
 
-  // Update UI statuses
-  if (lv_scr_act() == settings_scr) {
-    settings_screen_update_wifi_status();
-  } else if (lv_scr_act() == home_scr) {
-    wifi_state_t wifi = wifi_service_state();
-    const char *sync = (wifi == WIFI_CONNECTED) ? "Online" : "Offline";
-    home_screen_set_sync_status(sync);
-  }
+    if (lv_scr_act() == home_scr) {
+        home_screen_set_sync_status(
+            wifi_service_state() == WIFI_CONNECTED ? "Online" : "Offline"
+        );
+    }
 }
