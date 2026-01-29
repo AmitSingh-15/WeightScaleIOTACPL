@@ -16,11 +16,14 @@
 #include "storage_service.h"
 #include "wifi_service.h"
 #include "ota_service.h"
+#include "calibration_screen.h"
 
 /* ================= GLOBAL STATE ================= */
 
 static lv_obj_t *home_scr = NULL;
 static lv_obj_t *settings_scr = NULL;
+static lv_obj_t *cal_scr = NULL;
+
 
 static uint16_t qty = 1;
 #define HX711_DOUT 19
@@ -36,6 +39,7 @@ bool measure_enable = false;
 // Non-blocking timing
 static uint32_t last_weight_read = 0;
 const uint32_t WEIGHT_INTERVAL_MS = 200; // 5 Hz update
+static float weight_offset = 0.0f;
 /* ================= CALLBACKS ================= */
 
 static void ui_event(int evt)
@@ -59,6 +63,11 @@ static void ui_event(int evt)
     }
 }
 
+static void open_calibration()
+{
+    lv_scr_load(cal_scr);
+}
+
 static void back_cb(void)
 {
     lv_scr_load(home_scr);
@@ -74,7 +83,9 @@ static void update_weight()
     // delay(2000);
     if (scale.is_ready())
     {
-        weight = scale.get_units(5);  // Average 5 readings
+        float raw = scale.get_units(5);// Average 5 readings
+        weight = raw - weight_offset;
+        if (weight < 0) weight = 0;  
         home_screen_set_weight(weight);  // Update your LVGL display with the new weight
         Serial.println("Weight: ");
         Serial.print(weight, 2); // 2 decimal places
@@ -88,6 +99,18 @@ static void update_weight()
       //  delay(500);
 
         
+}
+
+static void calibration_back_cb()
+{
+    lv_scr_load(settings_scr);
+}
+
+static void calibration_do_cb()
+{
+    // make current raw weight zero
+    weight_offset += weight;
+    storage_save_offset(weight_offset);
 }
 
 
@@ -104,6 +127,8 @@ void setup()
     lvgl_port_init();
 
     storage_service_init();
+    weight_offset = storage_load_offset();
+
     invoice_service_init();
     wifi_service_init();
     ota_service_init();
@@ -117,6 +142,13 @@ void setup()
 
     settings_screen_create(settings_scr);
     settings_screen_register_back_callback(back_cb);
+    settings_screen_register_calibration_callback(open_calibration);
+
+    cal_scr = lv_obj_create(NULL);
+    calibration_screen_create(cal_scr);
+    calibration_screen_register_back(calibration_back_cb);
+    calibration_screen_register_calibrate(calibration_do_cb);
+
 
     home_screen_set_quantity(qty);
     home_screen_set_weight(weight);
@@ -143,4 +175,8 @@ void loop()
             wifi_service_state() == WIFI_CONNECTED ? "Online" : "Offline"
         );
     }
+    if (lv_scr_act() == cal_scr) {
+    calibration_screen_set_weight(weight);
+}
+
 }

@@ -41,3 +41,13 @@ bool storage_enqueue_record(const invoice_record_t *rec)
     // Real SPIFFS/JSON batching comes in Step-4
     return true;
 }
+
+void storage_save_offset(float val)
+{
+    prefs.putFloat("offset", val);
+}
+
+float storage_load_offset(void)
+{
+    return prefs.getFloat("offset", 0.0f);
+}

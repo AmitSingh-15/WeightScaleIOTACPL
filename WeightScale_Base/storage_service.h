@@ -14,3 +14,6 @@ uint32_t storage_load_last_day(void);
 
 /* Offline queue */
 bool storage_enqueue_record(const invoice_record_t *rec);
+
+void storage_save_offset(float val);
+float storage_load_offset(void);

@@ -6,6 +6,8 @@
 
 static lv_obj_t *wifi_status;
 static void (*back_cb)(void) = NULL;
+static void (*calibration_cb)(void) = NULL;
+
 
 static void back_cb_wrapper(lv_event_t *e)
 {
@@ -30,6 +32,10 @@ static void connect_cb(lv_event_t *e)
 void settings_screen_register_back_callback(void (*cb)(void))
 {
     back_cb = cb;
+}
+void settings_screen_register_calibration_callback(void (*cb)(void))
+{
+    calibration_cb = cb;
 }
 
 void settings_screen_create(lv_obj_t *parent)
@@ -69,6 +75,15 @@ void settings_screen_create(lv_obj_t *parent)
     lv_obj_align(connect_btn, LV_ALIGN_TOP_LEFT, 200, 100);
     lv_obj_add_event_cb(connect_btn, connect_cb, LV_EVENT_CLICKED, NULL);
     lv_label_set_text(lv_label_create(connect_btn), "Connect");
+
+    lv_obj_t *cal_btn = lv_btn_create(card);
+    lv_obj_add_style(cal_btn, &g_styles.btn_primary, 0);
+    lv_obj_align(cal_btn, LV_ALIGN_TOP_LEFT, 20, 220);
+    lv_label_set_text(lv_label_create(cal_btn), "Calibration");
+    lv_obj_add_event_cb(cal_btn, [](lv_event_t *e){
+        if (calibration_cb) calibration_cb();
+    }, LV_EVENT_CLICKED, NULL);
+
 
     lv_obj_t *ota_btn = lv_btn_create(card);
     lv_obj_add_style(ota_btn, &g_styles.btn_primary, 0);
