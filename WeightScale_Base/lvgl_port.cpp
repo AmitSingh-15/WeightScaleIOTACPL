@@ -25,11 +25,7 @@ static void flush_cb(lv_disp_drv_t *disp,
 
     tft.startWrite();
     tft.setAddrWindow(area->x1, area->y1, w, h);
-    tft.writePixels(
-        (lgfx::rgb565_t *)&color_p->full,
-        w * h,
-        true
-    );
+    tft.writePixels((uint16_t *)color_p, w * h, true);
     tft.endWrite();
 
     lv_disp_flush_ready(disp);
@@ -41,12 +37,12 @@ void lvgl_port_init(void)
     tft.begin();        // ✅ then display
 
     buf1 = (lv_color_t *)heap_caps_malloc(
-        SCREEN_WIDTH * 40 * sizeof(lv_color_t),
+        screenWidth * 60 * sizeof(lv_color_t),
         MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT
     );
 
     buf2 = (lv_color_t *)heap_caps_malloc(
-        SCREEN_WIDTH * 40 * sizeof(lv_color_t),
+        screenWidth * 60 * sizeof(lv_color_t),
         MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT
     );
 
@@ -59,18 +55,20 @@ void lvgl_port_init(void)
         &draw_buf,
         buf1,
         buf2,
-        SCREEN_WIDTH * 40
+        screenWidth * 60
     );
 
     static lv_disp_drv_t disp_drv;
     lv_disp_drv_init(&disp_drv);
-    disp_drv.hor_res  = SCREEN_WIDTH;
-    disp_drv.ver_res  = SCREEN_HEIGHT;
+    disp_drv.hor_res  = screenWidth;
+    disp_drv.ver_res  = screenHeight;
     disp_drv.flush_cb = flush_cb;
     disp_drv.draw_buf = &draw_buf;
     lv_disp_drv_register(&disp_drv);
+    
+lv_tick.attach_ms(1, tick_cb);
 
-    lv_tick.attach_ms(1, tick_cb);   // ✅ proper 1ms tick
+  //lv_tick.(1,tick_cb);   // ✅ proper 1ms tick
 }
 
 void lvgl_port_loop(void)

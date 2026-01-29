@@ -68,7 +68,7 @@ public:
             cfg.pin_hsync   = GPIO_NUM_39;
             cfg.pin_pclk    = GPIO_NUM_0;
 
-            cfg.freq_write = 12000000;
+            cfg.freq_write = 14000000;
 
             cfg.hsync_polarity    = 0;
             cfg.hsync_front_porch = 40;
@@ -76,11 +76,11 @@ public:
             cfg.hsync_back_porch  = 40;
 
             cfg.vsync_polarity    = 0;
-            cfg.vsync_front_porch = 1;
-            cfg.vsync_pulse_width = 31;
-            cfg.vsync_back_porch  = 13;
+            cfg.vsync_front_porch = 16;
+            cfg.vsync_pulse_width = 96;
+            cfg.vsync_back_porch  = 48;
 
-            cfg.pclk_active_neg = 1;
+            cfg.pclk_active_neg = 0;
 
             bus.config(cfg);
             panel.setBus(&bus);

@@ -1,7 +1,8 @@
 #include "home_screen.h"
 #include "ui_styles.h"
 #include "ui_events.h"
-
+#include <stdlib.h>
+#include <stdio.h>
 
 static lv_obj_t *lbl_weight;
 static lv_obj_t *lbl_qty;
@@ -12,8 +13,11 @@ static void (*event_cb)(int evt) = NULL;
 static void btn_event_cb(lv_event_t *e)
 {
     if (!event_cb) return;
-    int id = (int)lv_event_get_user_data(e);
-    event_cb(id);
+    //int id = (int)lv_event_get_user_data(e);
+    uintptr_t id = (uintptr_t)lv_event_get_user_data(e);
+    event_cb((int)id);
+
+   // event_cb(id);
 }
 
 void home_screen_register_callback(void (*cb)(int evt))
@@ -25,7 +29,10 @@ void home_screen_create(lv_obj_t *parent)
 {
     ui_styles_init();
 
-    lv_obj_t *screen = lv_obj_create(parent);
+    //lv_obj_t *screen = lv_obj_create(parent);
+    lv_obj_t *screen = parent;
+
+    
     lv_obj_add_style(screen, &g_styles.screen, 0);
     lv_obj_set_size(screen, 800, 480);
 
@@ -108,9 +115,13 @@ void home_screen_create(lv_obj_t *parent)
 void home_screen_set_weight(float weight)
 {
     static char buf[16];
-    lv_snprintf(buf, sizeof(buf), "%.2f", weight);
+    int value = (int)(weight * 100);
+    lv_snprintf(buf, sizeof(buf), "%d.%02d", value / 100, abs(value % 100));
     lv_label_set_text(lbl_weight, buf);
 }
+
+
+
 
 void home_screen_set_quantity(uint16_t qty)
 {

@@ -1,6 +1,10 @@
 #define LV_CONF_INCLUDE_SIMPLE
 #include <lvgl.h>
 #include <Arduino.h>
+#include <HX711.h>
+#include <Wire.h>
+#include <SPI.h>
+
 
 #include "gfx_conf.h"
 #include "lvgl_port.h"
@@ -19,8 +23,19 @@ static lv_obj_t *home_scr = NULL;
 static lv_obj_t *settings_scr = NULL;
 
 static uint16_t qty = 1;
-static float weight = 0.0f;
+#define HX711_DOUT 19
+#define HX711_SCK  20
 
+// ---------------- Touch ----------------
+uint16_t tx, ty;
+
+HX711 scale;
+static float weight = 0.0f;
+// ---------------- App State ----------------
+bool measure_enable = false;
+// Non-blocking timing
+static uint32_t last_weight_read = 0;
+const uint32_t WEIGHT_INTERVAL_MS = 200; // 5 Hz update
 /* ================= CALLBACKS ================= */
 
 static void ui_event(int evt)
@@ -51,16 +66,48 @@ static void back_cb(void)
 
 /* ================= ARDUINO ================= */
 
+static void update_weight()
+{
+   // static uint32_t last_read = 0;
+    if (millis() - last_weight_read  < WEIGHT_INTERVAL_MS) return;  // Read every 200 ms (~5 Hz)
+    last_weight_read  = millis();
+    // delay(2000);
+    if (scale.is_ready())
+    {
+        weight = scale.get_units(5);  // Average 5 readings
+        home_screen_set_weight(weight);  // Update your LVGL display with the new weight
+        Serial.println("Weight: ");
+        Serial.print(weight, 2); // 2 decimal places
+        Serial.println(" kg");
+         //delay(300);
+    }
+    else {
+          Serial.println("[ERROR] HX711 NOT READY");
+       
+        }
+      //  delay(500);
+
+        
+}
+
+
 void setup()
 {
     Serial.begin(115200);
+    
+ // ------------------- INIT HX711 -------------------
+    scale.begin(HX711_DOUT, HX711_SCK);
+    scale.set_scale(2280.0f); // <-- adjust this calibration value
+    scale.tare();              // reset scale to 0
 
+    // ------------------- INIT LVGL -------------------
     lvgl_port_init();
 
     storage_service_init();
     invoice_service_init();
     wifi_service_init();
     ota_service_init();
+    // ------------------- CREATE SCREENS -------------------
 
     home_scr = lv_obj_create(NULL);
     settings_scr = lv_obj_create(NULL);
@@ -76,13 +123,22 @@ void setup()
     home_screen_set_invoice(invoice_service_current_id());
 
     lv_scr_load(home_scr);
+
+   
 }
 
 void loop()
 {
     lvgl_port_loop();
+     scale.begin(HX711_DOUT, HX711_SCK);
+    delay(2000);
+    
+    update_weight();  // <-- Add this line to update the weight live
+
     wifi_service_loop();
     invoice_service_daily_reset_if_needed();
+    measure_enable = true;
+  
 
     if (lv_scr_act() == home_scr) {
         home_screen_set_sync_status(
