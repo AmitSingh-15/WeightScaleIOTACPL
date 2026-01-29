@@ -130,8 +130,6 @@ void setup()
 void loop()
 {
     lvgl_port_loop();
-     scale.begin(HX711_DOUT, HX711_SCK);
-    delay(2000);
     
     update_weight();  // <-- Add this line to update the weight live
 

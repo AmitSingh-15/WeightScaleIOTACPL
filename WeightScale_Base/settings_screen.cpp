@@ -34,7 +34,7 @@ void settings_screen_register_back_callback(void (*cb)(void))
 
 void settings_screen_create(lv_obj_t *parent)
 {
-    lv_obj_t *scr = lv_obj_create(parent);
+    lv_obj_t *scr = parent;
     lv_obj_add_style(scr, &g_styles.screen, 0);
     lv_obj_set_size(scr, 800, 480);
 
