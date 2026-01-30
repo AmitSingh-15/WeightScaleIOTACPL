@@ -68,19 +68,20 @@ public:
             cfg.pin_hsync   = GPIO_NUM_39;
             cfg.pin_pclk    = GPIO_NUM_0;
 
-            cfg.freq_write = 14000000;
+            cfg.freq_write = 12000000;
 
-            cfg.hsync_polarity    = 0;
             cfg.hsync_front_porch = 40;
             cfg.hsync_pulse_width = 48;
             cfg.hsync_back_porch  = 40;
 
-            cfg.vsync_polarity    = 0;
-            cfg.vsync_front_porch = 16;
-            cfg.vsync_pulse_width = 96;
-            cfg.vsync_back_porch  = 48;
+            cfg.vsync_front_porch = 1;
+            cfg.vsync_pulse_width = 31;
+            cfg.vsync_back_porch  = 13;
 
-            cfg.pclk_active_neg = 0;
+            cfg.pclk_active_neg = 1;
+            cfg.de_idle_high = 0;
+            cfg.pclk_idle_high = 0;
+
 
             bus.config(cfg);
             panel.setBus(&bus);
@@ -96,19 +97,23 @@ public:
 
         // Touch
         {
-            auto cfg = touch.config();
-            cfg.x_min = 0;
-            cfg.x_max = screenWidth - 1;
-            cfg.y_min = 0;
-            cfg.y_max = screenHeight - 1;
-            cfg.i2c_port = I2C_NUM_1;
-            cfg.pin_sda = GPIO_NUM_19;
-            cfg.pin_scl = GPIO_NUM_20;
-            cfg.i2c_addr = 0x14;
-            cfg.freq = 400000;
-            cfg.bus_shared = true;
-            touch.config(cfg);
-            panel.setTouch(&touch);
+        auto cfg = touch.config();
+        cfg.x_min = 0;
+        cfg.x_max = 799;
+        cfg.y_min = 0;
+        cfg.y_max = 479;
+        cfg.i2c_port = I2C_NUM_1;
+        cfg.pin_sda = GPIO_NUM_19;
+        cfg.pin_scl = GPIO_NUM_20;
+        cfg.i2c_addr = 0x14;
+        cfg.freq = 400000;
+        cfg.bus_shared = true;
+        cfg.pin_int = -1;
+        cfg.pin_rst = -1;
+        cfg.offset_rotation = 0;
+        touch.config(cfg);
+        panel.setTouch(&touch);
+
         }
 
         setPanel(&panel);
