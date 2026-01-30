@@ -3,11 +3,15 @@
 #include "ui_events.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include "invoice_service.h"
+#include "storage_service.h"
 
 static lv_obj_t *lbl_weight;
 static lv_obj_t *lbl_qty;
 static lv_obj_t *lbl_invoice;
 static lv_obj_t *lbl_sync;
+static lv_obj_t *history_lbl[5];
+
 static void (*event_cb)(int evt) = NULL;
 
 static void btn_event_cb(lv_event_t *e)
@@ -120,6 +124,31 @@ void home_screen_create(lv_obj_t *parent)
     lv_obj_t *save_lbl = lv_label_create(save_btn);
     lv_label_set_text(save_lbl, "SAVE");
     lv_obj_center(save_lbl);
+
+    /* ================= HISTORY ================= */
+    lv_obj_t *hist_card = lv_obj_create(screen);
+    lv_obj_add_style(hist_card, &g_styles.card, 0);
+    lv_obj_set_grid_cell(hist_card, LV_GRID_ALIGN_STRETCH, 2, 1,
+                                    LV_GRID_ALIGN_STRETCH, 2, 1);
+
+    lv_obj_t *hist_title = lv_label_create(hist_card);
+    lv_label_set_text(hist_title, "Last 5");
+    lv_obj_align(hist_title, LV_ALIGN_TOP_LEFT, 5, 5);
+
+    for (int i = 0; i < 5; i++) {
+        history_lbl[i] = lv_label_create(hist_card);
+        lv_label_set_text(history_lbl[i], "-");
+        lv_obj_align(history_lbl[i], LV_ALIGN_TOP_LEFT, 5, 30 + i * 20);
+    }
+
+    /* RESET BUTTON */
+    lv_obj_t *reset_btn = lv_btn_create(hist_card);
+    lv_obj_add_style(reset_btn, &g_styles.btn_danger, 0);
+    lv_obj_align(reset_btn, LV_ALIGN_BOTTOM_RIGHT, -10, -5);
+    lv_obj_add_event_cb(reset_btn, btn_event_cb, LV_EVENT_CLICKED, (void*)UI_EVT_RESET);
+    lv_label_set_text(lv_label_create(reset_btn), "RESET");
+
+
 }
 
 /* ================= SETTERS ================= */
@@ -150,3 +179,23 @@ void home_screen_set_sync_status(const char *txt)
 {
     lv_label_set_text(lbl_sync, txt);
 }
+
+void home_screen_update_history(void)
+{
+    invoice_record_t recs[5];
+    uint8_t count = storage_get_last_records(recs, 5);
+
+    for (int i = 0; i < 5; i++) {
+        if (i < count) {
+            static char buf[32];
+            snprintf(buf, sizeof(buf),
+                     "#%lu  %.2fkg",
+                     recs[i].invoice_id,
+                     recs[i].weight);
+            lv_label_set_text(history_lbl[i], buf);
+        } else {
+            lv_label_set_text(history_lbl[i], "-");
+        }
+    }
+}
+

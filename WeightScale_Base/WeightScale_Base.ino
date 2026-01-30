@@ -59,7 +59,15 @@ static void ui_event(int evt)
             home_screen_set_invoice(invoice_service_current_id());
             qty = 1;
             home_screen_set_quantity(qty);
+            home_screen_update_history();
         }
+    }
+    if (evt == UI_EVT_RESET)
+    {
+        storage_clear_all_records();
+        invoice_service_init();
+        home_screen_update_history();
+        home_screen_set_invoice(invoice_service_current_id());
     }
 }
 
@@ -153,7 +161,7 @@ void setup()
     home_screen_set_quantity(qty);
     home_screen_set_weight(weight);
     home_screen_set_invoice(invoice_service_current_id());
-
+    home_screen_update_history();
     lv_scr_load(home_scr);
 
    
@@ -167,6 +175,7 @@ void loop()
 
     wifi_service_loop();
     invoice_service_daily_reset_if_needed();
+    storage_check_new_day_and_reset();
     measure_enable = true;
   
 

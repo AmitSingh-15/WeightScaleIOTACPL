@@ -1,6 +1,7 @@
 #include "time_service.h"
 #include <time.h>
 
+
 uint32_t time_service_now(void)
 {
     return (uint32_t)time(nullptr);

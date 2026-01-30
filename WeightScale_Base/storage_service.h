@@ -17,3 +17,9 @@ bool storage_enqueue_record(const invoice_record_t *rec);
 
 void storage_save_offset(float val);
 float storage_load_offset(void);
+
+void storage_add_full_record(const invoice_record_t *rec);
+uint32_t storage_get_record_count(void);
+uint8_t storage_get_last_records(invoice_record_t *out, uint8_t max);
+void storage_check_new_day_and_reset(void);
+void storage_clear_all_records(void);

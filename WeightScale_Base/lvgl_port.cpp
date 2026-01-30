@@ -3,6 +3,7 @@
 #include <Ticker.h>
 #include "esp_heap_caps.h"
 
+static void touch_read(lv_indev_drv_t *drv, lv_indev_data_t *data);
 static Ticker lv_tick;
 
 static lv_disp_draw_buf_t draw_buf;
@@ -65,6 +66,12 @@ void lvgl_port_init(void)
     disp_drv.flush_cb = flush_cb;
     disp_drv.draw_buf = &draw_buf;
     lv_disp_drv_register(&disp_drv);
+    static lv_indev_drv_t indev_drv;
+    lv_indev_drv_init(&indev_drv);
+    indev_drv.type = LV_INDEV_TYPE_POINTER;
+    indev_drv.read_cb = touch_read;
+    lv_indev_drv_register(&indev_drv);
+
     
 lv_tick.attach_ms(1, tick_cb);
 
@@ -74,4 +81,17 @@ lv_tick.attach_ms(1, tick_cb);
 void lvgl_port_loop(void)
 {
     lv_timer_handler();
+}
+
+/* Touch read */
+static void touch_read(lv_indev_drv_t *drv, lv_indev_data_t *data)
+{
+    uint16_t x, y;
+    if (tft.getTouch(&x, &y)) {
+        data->state = LV_INDEV_STATE_PR;
+        data->point.x = x;
+        data->point.y = y;
+    } else {
+        data->state = LV_INDEV_STATE_REL;
+    }
 }

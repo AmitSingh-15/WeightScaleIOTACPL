@@ -30,6 +30,7 @@ void invoice_service_daily_reset_if_needed(void)
         current_invoice = 1;
         storage_save_invoice(current_invoice);
         storage_save_last_day(today);
+        storage_clear_all_records();
     }
 }
 
@@ -51,6 +52,8 @@ bool invoice_service_save(float weight,
     if (!storage_enqueue_record(&rec)) {
         return false;
     }
+
+    storage_add_full_record(&rec);
 
     if (out) *out = rec;
 
