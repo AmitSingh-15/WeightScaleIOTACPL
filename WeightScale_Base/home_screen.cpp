@@ -62,7 +62,8 @@ void home_screen_create(lv_obj_t *parent)
     lv_obj_set_size(settings_btn, 40, 30);
     lv_obj_align(settings_btn, LV_ALIGN_RIGHT_MID, -10, 0);
     lv_obj_add_event_cb(settings_btn, btn_event_cb, LV_EVENT_CLICKED, (void*)UI_EVT_SETTINGS);
-    lv_label_set_text(lv_label_create(settings_btn), "⚙");
+    lv_label_set_text(lv_label_create(settings_btn), "SETTINGS");
+    lv_obj_move_foreground(settings_btn);
 
     /* Weight Card */
     lv_obj_t *weight_card = lv_obj_create(screen);
