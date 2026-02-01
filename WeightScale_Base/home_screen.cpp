@@ -11,6 +11,8 @@ static lv_obj_t *lbl_qty;
 static lv_obj_t *lbl_invoice;
 static lv_obj_t *lbl_sync;
 static lv_obj_t *history_lbl[5];
+static lv_obj_t *btn_measure;   // ✅ ADD
+static lv_obj_t *lbl_measure;   // ✅ ADD
 
 static void (*event_cb)(int evt) = NULL;
 
@@ -125,6 +127,21 @@ void home_screen_create(lv_obj_t *parent)
     lv_label_set_text(save_lbl, "SAVE");
     lv_obj_center(save_lbl);
 
+   /* ================= MEASURE BUTTON (ADDED) ================= */
+    btn_measure = lv_btn_create(screen);
+    lv_obj_add_style(btn_measure, &g_styles.btn_secondary, 0);
+    lv_obj_set_size(btn_measure, 150, 60);
+    lv_obj_set_grid_cell(btn_measure,
+                         LV_GRID_ALIGN_CENTER, 0, 1,
+                         LV_GRID_ALIGN_CENTER, 3, 1);
+
+    lv_obj_add_event_cb(btn_measure, btn_event_cb,
+                        LV_EVENT_CLICKED, (void*)UI_EVT_MEASURE);
+
+    lbl_measure = lv_label_create(btn_measure);
+    lv_label_set_text(lbl_measure, "MEASURE");
+    lv_obj_center(lbl_measure);
+
     /* ================= HISTORY ================= */
     lv_obj_t *hist_card = lv_obj_create(screen);
     lv_obj_add_style(hist_card, &g_styles.card, 0);
@@ -147,8 +164,6 @@ void home_screen_create(lv_obj_t *parent)
     lv_obj_align(reset_btn, LV_ALIGN_BOTTOM_RIGHT, -10, -5);
     lv_obj_add_event_cb(reset_btn, btn_event_cb, LV_EVENT_CLICKED, (void*)UI_EVT_RESET);
     lv_label_set_text(lv_label_create(reset_btn), "RESET");
-
-
 }
 
 /* ================= SETTERS ================= */
@@ -199,3 +214,21 @@ void home_screen_update_history(void)
     }
 }
 
+/* ================= MEASURE STATE (ADDED / FIXED) ================= */
+void home_screen_set_measure_state(bool enabled)
+{
+    if (!btn_measure || !lbl_measure) return;
+
+    // Remove previous styles to avoid stacking
+    //lv_obj_remove_style_all(btn_measure);
+
+    if (enabled) {
+        lv_label_set_text(lbl_measure, "STOP");                   // update label
+        lv_obj_add_style(btn_measure, &g_styles.btn_danger, 0);   // red button for STOP
+    } else {
+        lv_label_set_text(lbl_measure, "MEASURE");                // default label
+        lv_obj_add_style(btn_measure, &g_styles.btn_secondary, 0); // secondary button
+    }
+
+    lv_obj_center(lbl_measure); // keep label centered
+}
