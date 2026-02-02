@@ -1,4 +1,19 @@
+/**
+ *
+ * HX711 library for Arduino - example file
+ * https://github.com/bogde/HX711
+ *
+ * MIT License
+ * (c) 2018 Bogdan Necula
+ *
+**/
 #include "HX711.h"
+
+
+// HX711 circuit wiring
+const int LOADCELL_DOUT_PIN = 2;
+const int LOADCELL_SCK_PIN = 3;
+
 
 HX711 scale;
 
@@ -7,10 +22,14 @@ void setup() {
   Serial.println("HX711 Demo");
 
   Serial.println("Initializing the scale");
-  // parameter "gain" is ommited; the default value 128 is used by the library
-  // HX711.DOUT	- pin #A1
-  // HX711.PD_SCK	- pin #A0
-  scale.begin(A1, A0);
+
+  // Initialize library with data output pin, clock input pin and gain factor.
+  // Channel selection is made by passing the appropriate gain:
+  // - With a gain factor of 64 or 128, channel A is selected
+  // - With a gain factor of 32, channel B is selected
+  // By omitting the gain factor parameter, the library
+  // default "128" (Channel A) is used here.
+  scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
 
   Serial.println("Before setting up the scale:");
   Serial.print("read: \t\t");

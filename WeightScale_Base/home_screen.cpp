@@ -7,14 +7,18 @@
 #include "storage_service.h"
 
 static lv_obj_t *lbl_weight;
-static lv_obj_t *lbl_qty;
+static lv_obj_t *lbl_qty_main;
+static lv_obj_t *lbl_qty_ctrl;
+static lv_obj_t *lbl_total;
 static lv_obj_t *lbl_invoice;
 static lv_obj_t *lbl_sync;
 static lv_obj_t *history_lbl[5];
-static lv_obj_t *btn_measure;   // ✅ ADD
-static lv_obj_t *lbl_measure;   // ✅ ADD
+static lv_obj_t *lbl_brand;
+static lv_obj_t *lbl_power;
+
 
 static void (*event_cb)(int evt) = NULL;
+
 
 static void btn_event_cb(lv_event_t *e)
 {
@@ -40,6 +44,16 @@ void home_screen_create(lv_obj_t *parent)
     static lv_coord_t row[] = { 80, 160, 120, 80, LV_GRID_TEMPLATE_LAST };
 
     lv_obj_set_grid_dsc_array(screen, col, row);
+
+    lbl_brand = lv_label_create(parent);
+    lv_label_set_text(lbl_brand, "ACPL delivering progress");
+    lv_obj_align(lbl_brand, LV_ALIGN_TOP_MID, 0, 5);
+
+    lbl_power = lv_label_create(parent);
+    lv_label_set_text(lbl_power, "powered by Vastotech");
+    lv_obj_set_style_text_font(lbl_power, &lv_font_montserrat_14, 0);
+    lv_obj_align_to(lbl_power, lbl_brand, LV_ALIGN_OUT_BOTTOM_MID, 0, 2);
+
 
     /* ================= HEADER ================= */
     lv_obj_t *header = lv_obj_create(screen);
@@ -69,20 +83,24 @@ void home_screen_create(lv_obj_t *parent)
     lv_obj_center(set_lbl);
 
     /* ================= WEIGHT CARD ================= */
-    lv_obj_t *weight_card = lv_obj_create(screen);
+    lv_obj_t *weight_card = lv_obj_create(parent);
+    lv_obj_set_size(weight_card, 760, 190);
+    lv_obj_align(weight_card, LV_ALIGN_TOP_MID, 0, 50);
     lv_obj_add_style(weight_card, &g_styles.card, 0);
-    lv_obj_set_grid_cell(weight_card, LV_GRID_ALIGN_STRETCH, 0, 3,
-                                      LV_GRID_ALIGN_STRETCH, 1, 1);
-
-    lv_obj_t *wt_title = lv_label_create(weight_card);
-    lv_label_set_text(wt_title, "WEIGHT (kg)");
-    lv_obj_add_style(wt_title, &g_styles.title, 0);
-    lv_obj_align(wt_title, LV_ALIGN_TOP_MID, 0, 5);
 
     lbl_weight = lv_label_create(weight_card);
-    lv_label_set_text(lbl_weight, "0.00");
-    lv_obj_add_style(lbl_weight, &g_styles.value_big, 0);
-    lv_obj_align(lbl_weight, LV_ALIGN_CENTER, 0, 20);
+    lv_label_set_text(lbl_weight, "0.00 kg");
+    lv_obj_set_style_text_font(lbl_weight,
+                            &lv_font_montserrat_48, 0);
+    lv_obj_align(lbl_weight, LV_ALIGN_TOP_MID, 0, 10);
+
+    lbl_qty_main = lv_label_create(weight_card);
+    lv_label_set_text(lbl_qty_main, "Qty: 1");
+    lv_obj_align(lbl_qty_main, LV_ALIGN_BOTTOM_LEFT, 20, -10);
+
+    lbl_total = lv_label_create(weight_card);
+    lv_label_set_text(lbl_total, "Total: 0.00 kg");
+    lv_obj_align(lbl_total, LV_ALIGN_BOTTOM_RIGHT, -20, -10);
 
     /* ================= QUANTITY ================= */
     lv_obj_t *qty_card = lv_obj_create(screen);
@@ -90,10 +108,10 @@ void home_screen_create(lv_obj_t *parent)
     lv_obj_set_grid_cell(qty_card, LV_GRID_ALIGN_STRETCH, 0, 1,
                                     LV_GRID_ALIGN_STRETCH, 2, 1);
 
-    lbl_qty = lv_label_create(qty_card);
-    lv_label_set_text(lbl_qty, "Qty: 1");
-    lv_obj_add_style(lbl_qty, &g_styles.value, 0);
-    lv_obj_center(lbl_qty);
+    lbl_qty_ctrl = lv_label_create(qty_card);
+    lv_label_set_text(lbl_qty_ctrl, "Qty: 1");
+    lv_obj_add_style(lbl_qty_ctrl, &g_styles.value, 0);
+    lv_obj_center(lbl_qty_ctrl);
 
     lv_obj_t *btn_plus = lv_btn_create(qty_card);
     lv_obj_add_style(btn_plus, &g_styles.btn_secondary, 0);
@@ -126,21 +144,6 @@ void home_screen_create(lv_obj_t *parent)
     lv_obj_t *save_lbl = lv_label_create(save_btn);
     lv_label_set_text(save_lbl, "SAVE");
     lv_obj_center(save_lbl);
-
-   /* ================= MEASURE BUTTON (ADDED) ================= */
-    btn_measure = lv_btn_create(screen);
-    lv_obj_add_style(btn_measure, &g_styles.btn_secondary, 0);
-    lv_obj_set_size(btn_measure, 150, 60);
-    lv_obj_set_grid_cell(btn_measure,
-                         LV_GRID_ALIGN_CENTER, 0, 1,
-                         LV_GRID_ALIGN_CENTER, 3, 1);
-
-    lv_obj_add_event_cb(btn_measure, btn_event_cb,
-                        LV_EVENT_CLICKED, (void*)UI_EVT_MEASURE);
-
-    lbl_measure = lv_label_create(btn_measure);
-    lv_label_set_text(lbl_measure, "MEASURE");
-    lv_obj_center(lbl_measure);
 
     /* ================= HISTORY ================= */
     lv_obj_t *hist_card = lv_obj_create(screen);
@@ -178,10 +181,13 @@ void home_screen_set_weight(float weight)
 
 void home_screen_set_quantity(uint16_t qty)
 {
-    static char buf[16];
+    char buf[16];
     lv_snprintf(buf, sizeof(buf), "Qty: %d", qty);
-    lv_label_set_text(lbl_qty, buf);
+
+    if (lbl_qty_main) lv_label_set_text(lbl_qty_main, buf);
+    if (lbl_qty_ctrl) lv_label_set_text(lbl_qty_ctrl, buf);
 }
+
 
 void home_screen_set_invoice(uint32_t invoice_id)
 {
@@ -214,21 +220,9 @@ void home_screen_update_history(void)
     }
 }
 
-/* ================= MEASURE STATE (ADDED / FIXED) ================= */
-void home_screen_set_measure_state(bool enabled)
+void home_screen_set_total(float total)
 {
-    if (!btn_measure || !lbl_measure) return;
-
-    // Remove previous styles to avoid stacking
-    //lv_obj_remove_style_all(btn_measure);
-
-    if (enabled) {
-        lv_label_set_text(lbl_measure, "STOP");                   // update label
-        lv_obj_add_style(btn_measure, &g_styles.btn_danger, 0);   // red button for STOP
-    } else {
-        lv_label_set_text(lbl_measure, "MEASURE");                // default label
-        lv_obj_add_style(btn_measure, &g_styles.btn_secondary, 0); // secondary button
-    }
-
-    lv_obj_center(lbl_measure); // keep label centered
+    static char buf[24];
+    snprintf(buf, sizeof(buf), "Total: %.2f kg", total);
+    lv_label_set_text(lbl_total, buf);
 }
