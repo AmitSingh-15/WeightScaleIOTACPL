@@ -102,6 +102,7 @@ static void calibration_back_cb()
 
 void setup()
 {
+    delay(2000);
     Serial.begin(115200);
     delay(500);
 
