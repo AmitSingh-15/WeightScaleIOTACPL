@@ -20,7 +20,7 @@ void ui_styles_init(void)
     lv_style_set_text_color(&g_styles.title, lv_color_hex(0x555555));
 
     lv_style_init(&g_styles.value_big);
-    lv_style_set_text_font(&g_styles.value_big, &lv_font_montserrat_14);
+    lv_style_set_text_font(&g_styles.value_big, &lv_font_montserrat_48);
     lv_style_set_text_color(&g_styles.value_big, lv_color_black());
 
     lv_style_init(&g_styles.value);

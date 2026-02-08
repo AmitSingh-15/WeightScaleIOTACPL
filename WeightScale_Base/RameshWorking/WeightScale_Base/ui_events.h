@@ -5,12 +5,11 @@ enum {
     UI_EVT_QTY_INC,
     UI_EVT_QTY_DEC,
 
-    /* 🔵 NEW FAST MULTIPLIERS */
+    /* FAST ADDERS */
     UI_EVT_QTY_X2,
     UI_EVT_QTY_X5,
     UI_EVT_QTY_X10,
 
     UI_EVT_RESET,
-    UI_EVT_SAVE,
-    UI_EVT_MEASURE    
+    UI_EVT_SAVE
 };

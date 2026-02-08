@@ -1,7 +1,6 @@
 #define LV_CONF_INCLUDE_SIMPLE
 #include <lvgl.h>
 #include <Arduino.h>
-#include <HX711.h>
 #include <Wire.h>
 #include <SPI.h>
 
@@ -10,12 +9,14 @@
 
 #include "home_screen.h"
 #include "settings_screen.h"
+#include "calibration_screen.h"
 
 #include "invoice_service.h"
 #include "storage_service.h"
 #include "wifi_service.h"
 #include "ota_service.h"
-#include "calibration_screen.h"
+#include "scale_service_v2.h"
+#include "ui_events.h"
 
 /* ================= GLOBAL STATE ================= */
 
@@ -24,37 +25,21 @@ static lv_obj_t *settings_scr = NULL;
 static lv_obj_t *cal_scr = NULL;
 
 static uint16_t qty = 1;
-
-#define HX711_DOUT 19
-#define HX711_SCK  20
-
-HX711 scale;
 static float weight = 0.0f;
 
-/* persistent scale factor */
-static float scale_factor = 2280.0f;
-
-/* ---------------- App State ---------------- */
-bool measure_enable = false;
-static uint32_t last_weight_read = 0;
-const uint32_t WEIGHT_INTERVAL_MS = 200;
-static float weight_offset = 0.0f;
-
-/* ================= CALLBACKS ================= */
+/* ================= UI EVENTS ================= */
 
 static void ui_event(int evt)
 {
     if (evt == UI_EVT_SETTINGS)
         lv_scr_load(settings_scr);
 
-    /* ===== QTY LOGIC REWRITTEN (clean & correct) ===== */
-
     if (evt == UI_EVT_QTY_INC) qty++;
     if (evt == UI_EVT_QTY_DEC && qty > 1) qty--;
 
-    if (evt == UI_EVT_QTY_X2)  qty *= 2;
-    if (evt == UI_EVT_QTY_X5)  qty *= 5;
-    if (evt == UI_EVT_QTY_X10) qty *= 10;
+    if (evt == UI_EVT_QTY_X2)  qty += 2;
+    if (evt == UI_EVT_QTY_X5)  qty += 5;
+    if (evt == UI_EVT_QTY_X10) qty += 10;
 
     if (evt == UI_EVT_QTY_INC ||
         evt == UI_EVT_QTY_DEC ||
@@ -63,52 +48,24 @@ static void ui_event(int evt)
         evt == UI_EVT_QTY_X10)
     {
         home_screen_set_quantity(qty);
-        home_screen_set_total_weight(weight * qty);
+        home_screen_set_total(weight * qty);
     }
 
-    /* ===== TOGGLE MEASUREMENT ===== */
-
-    if (evt == UI_EVT_MEASURE)
+    if (evt == UI_EVT_SAVE)
     {
-        measure_enable = !measure_enable;
-        home_screen_set_measure_state(measure_enable);
-
-        Serial.println(measure_enable ? "MEASURE ON" : "MEASURE OFF");
-
-        if (measure_enable)
-        {
-            scale.begin(HX711_DOUT, HX711_SCK);
-
-            delay(2000);
-
-            if (!scale.is_ready())
-            {
-                Serial.println("[HX711] NOT READY, waiting a bit...");
-                delay(200);
-            }
-
-            Serial.println("[HX711] Ready (or almost ready)");
-        }
-    }
-
-    /* ===== SAVE ===== */
-
-    if (evt == UI_EVT_SAVE) {
         invoice_record_t rec;
 
-        if (invoice_service_save(weight, qty, ENTRY_MANUAL, &rec)) {
-
+        if (invoice_service_save(weight, qty, ENTRY_MANUAL, &rec))
+        {
             home_screen_set_invoice(invoice_service_current_id());
 
             qty = 1;
             home_screen_set_quantity(qty);
-            home_screen_set_total_weight(weight * qty);
+            home_screen_set_total(weight * qty);
 
             home_screen_update_history();
         }
     }
-
-    /* ===== RESET ===== */
 
     if (evt == UI_EVT_RESET)
     {
@@ -119,11 +76,12 @@ static void ui_event(int evt)
     }
 }
 
+/* ================= SCREEN NAVIGATION ================= */
+
 static void open_calibration()
 {
     Serial.println("[CAL] Open calibration screen");
     lv_scr_load(cal_scr);
-    delay(200);
 }
 
 static void back_cb(void)
@@ -131,124 +89,67 @@ static void back_cb(void)
     lv_scr_load(home_scr);
 }
 
-/* ================= CALIBRATION ================= */
-
-static void calib_offset()
-{
-    Serial.println("OFFSET calibration = tare()");
-    delay(100);
-    scale.tare();
-    weight_offset = 0;
-    Serial.println("[CAL] OFFSET DONE");
-}
-
-static void calib_scale()
-{
-    const float known = 100.00;
-
-    Serial.println("[CAL] SCALE → place known weight 100kg");
-    delay(100);
-
-    Serial.print("Weight: ");
-    Serial.println(weight, 2);
-
-    float raw = weight;
-
-    scale_factor = raw / known;
-
-    scale.set_scale(scale_factor);
-    storage_save_offset(scale_factor);
-
-    Serial.print("New Scale factor: ");
-    Serial.println(scale_factor);
-
-    delay(2000);
-}
-
-static void calib_both()
-{
-    Serial.println("[CAL] BOTH calibration started");
-    calib_offset();
-    delay(200);
-    calib_scale();
-    Serial.println("[CAL] BOTH DONE");
-}
-
-/* ================= ARDUINO ================= */
-
-static void update_weight()
-{
-    if (!measure_enable)
-    {
-        Serial.println("stop mesurment");
-        return;
-    }
-
-    scale.begin(HX711_DOUT, HX711_SCK);
-
-    if (millis() - last_weight_read < WEIGHT_INTERVAL_MS) return;
-    last_weight_read = millis();
-
-    delay(150);
-
-    if (scale.is_ready())
-    {
-        float raw = scale.get_units(5);
-        weight = raw - weight_offset;
-
-        if (weight < 0) weight = 0;
-
-        home_screen_set_weight(weight);
-        home_screen_set_total_weight(weight * qty);   // ✅ NEW
-
-        calibration_screen_set_weight(weight);
-
-        Serial.print("Weight: ");
-        Serial.println(weight, 2);
-    }
-    else {
-        Serial.println("[ERROR] HX711 NOT READY");
-        delay(50);
-    }
-}
-
 static void calibration_back_cb()
 {
     lv_scr_load(settings_scr);
 }
+
+/* ================= CALIBRATION CALLBACKS ================= */
+
+static void calib_offset()
+{
+    Serial.println("[CAL] OFFSET (tare)");
+    scale_service_tare();
+}
+
+static void calib_scale()
+{
+    // Industrial flow:
+    // scale factor logic should live inside scale_service later
+    Serial.println("[CAL] SCALE requested (handled in service layer later)");
+}
+
+static void calib_both()
+{
+    calib_offset();
+    calib_scale();
+}
+
+/* ================= WEIGHT UPDATE ================= */
+
+static void update_weight()
+{
+    weight = scale_service_get_weight();
+
+    home_screen_set_weight(weight);
+    home_screen_set_total(weight * qty);
+    calibration_screen_set_weight(weight);
+}
+
+/* ================= SETUP ================= */
 
 void setup()
 {
     Serial.begin(115200);
     delay(500);
 
-    Serial.println("=== SYSTEM START ===");
+    Serial.println("=== INDUSTRIAL SCALE START ===");
 
     lvgl_port_init();
 
-    scale.begin(HX711_DOUT, HX711_SCK);
-    delay(500);
-
-    scale_factor = storage_load_offset();
-    if (scale_factor <= 0) scale_factor = 2280.0f;
-
-    scale.set_scale(scale_factor);
-    scale.tare();
-    delay(200);
-
-    Serial.print("[INIT] Scale factor = ");
-    Serial.println(scale_factor);
-
     storage_service_init();
-
     invoice_service_init();
     wifi_service_init();
     ota_service_init();
+
+    /* ===== START SCALE RTOS TASK ===== */
+    scale_service_init();
 
     /* ===== CREATE SCREENS ===== */
 
     home_scr = lv_obj_create(NULL);
     settings_scr = lv_obj_create(NULL);
+    cal_scr = lv_obj_create(NULL);
 
     home_screen_create(home_scr);
     home_screen_register_callback(ui_event);
@@ -257,24 +158,24 @@ void setup()
     settings_screen_register_back_callback(back_cb);
     settings_screen_register_calibration_callback(open_calibration);
 
-    cal_scr = lv_obj_create(NULL);
     calibration_screen_create(cal_scr);
-
     calibration_screen_register_back(calibration_back_cb);
     calibration_screen_register_offset(calib_offset);
     calibration_screen_register_scale(calib_scale);
     calibration_screen_register_both(calib_both);
 
+    /* ===== INITIAL UI STATE ===== */
+
     home_screen_set_quantity(qty);
-    home_screen_set_weight(weight);
-    home_screen_set_total_weight(weight * qty);   // ✅ NEW
+    home_screen_set_weight(0);
+    home_screen_set_total(0);
     home_screen_set_invoice(invoice_service_current_id());
     home_screen_update_history();
 
-    home_screen_set_measure_state(false);
-
     lv_scr_load(home_scr);
 }
+
+/* ================= LOOP ================= */
 
 void loop()
 {
@@ -286,7 +187,8 @@ void loop()
     invoice_service_daily_reset_if_needed();
     storage_check_new_day_and_reset();
 
-    if (lv_scr_act() == home_scr) {
+    if (lv_scr_act() == home_scr)
+    {
         home_screen_set_sync_status(
             wifi_service_state() == WIFI_CONNECTED ? "Online" : "Offline"
         );
