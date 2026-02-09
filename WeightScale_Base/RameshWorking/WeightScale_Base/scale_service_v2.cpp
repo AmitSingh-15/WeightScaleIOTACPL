@@ -2,8 +2,8 @@
 #include <HX711.h>
 #include <math.h>
 
-#define HX711_DOUT 19
-#define HX711_SCK  20
+#define HX711_DOUT 43
+#define HX711_SCK  44
 
 static HX711 scale;
 
