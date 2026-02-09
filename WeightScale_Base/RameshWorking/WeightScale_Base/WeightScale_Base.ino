@@ -18,7 +18,9 @@
 #include "scale_service_v2.h"
 #include "ui_events.h"
 
-/* ================= GLOBAL STATE ================= */
+/* =========================================================
+   GLOBAL STATE
+=========================================================*/
 
 static lv_obj_t *home_scr = NULL;
 static lv_obj_t *settings_scr = NULL;
@@ -27,7 +29,88 @@ static lv_obj_t *cal_scr = NULL;
 static uint16_t qty = 1;
 static float weight = 0.0f;
 
-/* ================= UI EVENTS ================= */
+/* Industrial scale profiles */
+
+static const scale_profile_t PROFILE_1KG =
+{
+    "1KG",
+    1.0f,
+    9000.0f,
+    0.35f,
+    0.002f,
+    500
+};
+
+static const scale_profile_t PROFILE_100KG =
+{
+    "100KG",
+    100.0f,
+    2280.0f,
+    0.25f,
+    0.02f,
+    1200
+};
+
+static const scale_profile_t PROFILE_500KG =
+{
+    "500KG",
+    500.0f,
+    450.0f,
+    0.15f,
+    0.08f,
+    1800
+};
+
+/* =========================================================
+   RESET CONFIRMATION POPUP (INDUSTRIAL)
+=========================================================*/
+
+static lv_obj_t *reset_msgbox = NULL;
+
+static void reset_confirm_cb(lv_event_t *e)
+{
+    lv_obj_t *obj = lv_event_get_target(e);
+    const char *txt = lv_msgbox_get_active_btn_text(obj);
+
+    if(strcmp(txt,"YES")==0)
+    {
+        Serial.println("[RESET] Confirmed");
+
+        /* HARD RESET */
+        storage_clear_all_records();
+
+        uint32_t id = 1;
+        storage_save_invoice(id);
+        invoice_service_init();
+
+        home_screen_update_history();
+        home_screen_set_invoice(invoice_service_current_id());
+    }
+
+    lv_msgbox_close(obj);
+    reset_msgbox = NULL;
+}
+
+static void show_reset_confirm_popup()
+{
+    if(reset_msgbox) return;
+
+    static const char *btns[] = {"YES","NO",""};
+
+    reset_msgbox = lv_msgbox_create(NULL,
+        "CONFIRM RESET",
+        "Do you want to clear today's complete history?",
+        btns,
+        true);
+
+    lv_obj_center(reset_msgbox);
+    lv_obj_add_event_cb(reset_msgbox, reset_confirm_cb,
+                        LV_EVENT_VALUE_CHANGED, NULL);
+}
+
+/* =========================================================
+   UI EVENTS
+=========================================================*/
 
 static void ui_event(int evt)
 {
@@ -67,16 +150,16 @@ static void ui_event(int evt)
         }
     }
 
+    /* 🔥 INDUSTRIAL RESET FLOW */
     if (evt == UI_EVT_RESET)
     {
-        storage_clear_all_records();
-        invoice_service_init();
-        home_screen_update_history();
-        home_screen_set_invoice(invoice_service_current_id());
+        show_reset_confirm_popup();
     }
 }
 
-/* ================= SCREEN NAVIGATION ================= */
+/* =========================================================
+   SCREEN NAVIGATION
+=========================================================*/
 
 static void open_calibration()
 {
@@ -89,12 +172,18 @@ static void back_cb(void)
     lv_scr_load(home_scr);
 }
 
-static void calibration_back_cb()
+static void calibration_wizard_event(int evt)
 {
-    lv_scr_load(settings_scr);
+    if(evt == CAL_EVT_BACK)
+    {
+        lv_scr_load(settings_scr);
+    }
 }
 
-/* ================= CALIBRATION CALLBACKS ================= */
+
+/* =========================================================
+   CALIBRATION CALLBACKS
+=========================================================*/
 
 static void calib_offset()
 {
@@ -104,9 +193,7 @@ static void calib_offset()
 
 static void calib_scale()
 {
-    // Industrial flow:
-    // scale factor logic should live inside scale_service later
-    Serial.println("[CAL] SCALE requested (handled in service layer later)");
+    Serial.println("[CAL] SCALE requested");
 }
 
 static void calib_both()
@@ -115,7 +202,9 @@ static void calib_both()
     calib_scale();
 }
 
-/* ================= WEIGHT UPDATE ================= */
+/* =========================================================
+   WEIGHT UPDATE LOOP
+=========================================================*/
 
 static void update_weight()
 {
@@ -123,10 +212,16 @@ static void update_weight()
 
     home_screen_set_weight(weight);
     home_screen_set_total(weight * qty);
-    calibration_screen_set_weight(weight);
+    calibration_screen_set_live(
+    weight,
+    scale_service_get_raw()   // NEW industrial raw read
+);
+
 }
 
-/* ================= SETUP ================= */
+/* =========================================================
+   SETUP
+=========================================================*/
 
 void setup()
 {
@@ -142,14 +237,15 @@ void setup()
     wifi_service_init();
     ota_service_init();
 
-    /* ===== START SCALE RTOS TASK ===== */
+    /* START RTOS SCALE SERVICE */
     scale_service_init();
+    scale_service_set_profile(&PROFILE_1KG);
 
-    /* ===== CREATE SCREENS ===== */
+    /* CREATE SCREENS */
 
-    home_scr = lv_obj_create(NULL);
+    home_scr     = lv_obj_create(NULL);
     settings_scr = lv_obj_create(NULL);
-    cal_scr = lv_obj_create(NULL);
+    cal_scr      = lv_obj_create(NULL);
 
     home_screen_create(home_scr);
     home_screen_register_callback(ui_event);
@@ -159,12 +255,10 @@ void setup()
     settings_screen_register_calibration_callback(open_calibration);
 
     calibration_screen_create(cal_scr);
-    calibration_screen_register_back(calibration_back_cb);
-    calibration_screen_register_offset(calib_offset);
-    calibration_screen_register_scale(calib_scale);
-    calibration_screen_register_both(calib_both);
+    calibration_screen_register_callback(calibration_wizard_event);
 
-    /* ===== INITIAL UI STATE ===== */
+
+    /* INITIAL UI */
 
     home_screen_set_quantity(qty);
     home_screen_set_weight(0);
@@ -175,7 +269,9 @@ void setup()
     lv_scr_load(home_scr);
 }
 
-/* ================= LOOP ================= */
+/* =========================================================
+   LOOP
+=========================================================*/
 
 void loop()
 {
@@ -190,7 +286,8 @@ void loop()
     if (lv_scr_act() == home_scr)
     {
         home_screen_set_sync_status(
-            wifi_service_state() == WIFI_CONNECTED ? "Online" : "Offline"
+            wifi_service_state() == WIFI_CONNECTED ?
+            "Online" : "Offline"
         );
     }
 }

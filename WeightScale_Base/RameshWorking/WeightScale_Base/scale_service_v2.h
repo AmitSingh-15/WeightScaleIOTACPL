@@ -1,11 +1,21 @@
-
 #pragma once
 #include <Arduino.h>
 
+typedef struct
+{
+    char  name[16];
+    float capacity;
+    float scale;
+    float ema_alpha;
+    float hold_threshold;
+    uint32_t hold_time_ms;
+} scale_profile_t;
+
 void scale_service_init();
-void scale_service_start();
+void scale_service_set_profile(const scale_profile_t *profile);
 
 float scale_service_get_weight();
 bool  scale_service_is_hold();
 
 void scale_service_tare();
+long scale_service_get_raw();
