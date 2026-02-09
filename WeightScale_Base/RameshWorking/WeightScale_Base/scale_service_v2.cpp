@@ -20,8 +20,7 @@ static scale_profile_t activeProfile =
 static float filtered_weight = 0;
 static bool hold_state = false;
 
-
-static TaskHandle_t scaleTaskHandle;
+static TaskHandle_t scaleTaskHandle = NULL;
 
 static float ema(float prev, float input, float alpha)
 {
@@ -35,37 +34,18 @@ static void scale_task(void *p)
     scale.set_scale(activeProfile.scale);
     scale.tare();
 
-    float lastStable = 0;
-    uint32_t stableStart = millis();
-
-    while(true)
+    while (true)
     {
-        if(scale.is_ready())
+        if (scale.is_ready())
         {
             float w = scale.get_units(3);
-            if(w < 0) w = 0;
+            if (w < 0) w = 0;
 
             filtered_weight = ema(
                 filtered_weight,
                 w,
                 activeProfile.ema_alpha
             );
-
-            if(fabs(filtered_weight - lastStable) <
-               activeProfile.hold_threshold)
-            {
-                if(millis() - stableStart >
-                   activeProfile.hold_time_ms)
-                {
-                    hold_state = true;
-                }
-            }
-            else
-            {
-                hold_state = false;
-                lastStable = filtered_weight;
-                stableStart = millis();
-            }
         }
 
         vTaskDelay(pdMS_TO_TICKS(40));
@@ -74,23 +54,24 @@ static void scale_task(void *p)
 
 void scale_service_init()
 {
+    // Delay scale task startup so LVGL + RGB panel fully stabilize
     xTaskCreatePinnedToCore(
         scale_task,
         "scaleTask",
-        4096,
+        8192,
         NULL,
         1,
         &scaleTaskHandle,
-        0
+        1   // 🔥 MOVE TO CORE 1
     );
 }
 
+
 void scale_service_set_profile(const scale_profile_t *profile)
 {
-    if(!profile) return;
+    if (!profile) return;
 
     activeProfile = *profile;
-
     scale.set_scale(activeProfile.scale);
 
     filtered_weight = 0;
@@ -111,8 +92,14 @@ void scale_service_tare()
 {
     scale.tare();
 }
+
 long scale_service_get_raw()
 {
-    if(!scale.is_ready()) return 0;
+    if (!scale.is_ready()) return 0;
     return scale.read();
+}
+
+const scale_profile_t* scale_service_get_profile()
+{
+    return &activeProfile;
 }

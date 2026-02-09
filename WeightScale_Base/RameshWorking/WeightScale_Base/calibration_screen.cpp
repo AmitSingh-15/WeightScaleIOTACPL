@@ -1,4 +1,5 @@
 #include "calibration_screen.h"
+#include "scale_service_v2.h"
 #include "ui_styles.h"
 #include <stdio.h>
 
@@ -26,8 +27,6 @@ void calibration_screen_register_callback(void (*cb)(int evt))
 
 void calibration_screen_create(lv_obj_t *parent)
 {
-    ui_styles_init();
-
     lv_obj_add_style(parent,&g_styles.screen,0);
     lv_obj_set_size(parent,800,480);
 
@@ -125,8 +124,24 @@ void calibration_screen_create(lv_obj_t *parent)
    LIVE UPDATE
 =====================================================*/
 
+
 void calibration_screen_set_live(float weight,long raw)
 {
+    /* 🔥 HARD SAFETY CHECKS */
+    if(!lbl_profile || !lv_obj_is_valid(lbl_profile)) return;
+    if(!lbl_weight  || !lv_obj_is_valid(lbl_weight))  return;
+    if(!lbl_raw     || !lv_obj_is_valid(lbl_raw))     return;
+
+    const scale_profile_t *p = scale_service_get_profile();
+    if(!p) return;
+
+    static char pbuf[64];
+    snprintf(pbuf,sizeof(pbuf),
+             "Profile: %s | Scale: %.1f",
+             p->name,
+             p->scale);
+    lv_label_set_text(lbl_profile,pbuf);
+
     static char wbuf[32];
     snprintf(wbuf,sizeof(wbuf),"%.3f kg",weight);
     lv_label_set_text(lbl_weight,wbuf);
@@ -135,3 +150,4 @@ void calibration_screen_set_live(float weight,long raw)
     snprintf(rbuf,sizeof(rbuf),"RAW: %ld",raw);
     lv_label_set_text(lbl_raw,rbuf);
 }
+

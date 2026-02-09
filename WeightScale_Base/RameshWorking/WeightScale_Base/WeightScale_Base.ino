@@ -1,6 +1,9 @@
+#define ARDUINO_USB_CDC_ON_BOOT 1
 #define LV_CONF_INCLUDE_SIMPLE
-#include <lvgl.h>
+
 #include <Arduino.h>
+#include <lvgl.h>
+
 #include <Wire.h>
 #include <SPI.h>
 
@@ -17,7 +20,7 @@
 #include "ota_service.h"
 #include "scale_service_v2.h"
 #include "ui_events.h"
-
+#include "ui_styles.h"
 /* =========================================================
    GLOBAL STATE
 =========================================================*/
@@ -28,6 +31,8 @@ static lv_obj_t *cal_scr = NULL;
 
 static uint16_t qty = 1;
 static float weight = 0.0f;
+static bool ui_frozen = false;
+static bool reset_pending = false;
 
 /* Industrial scale profiles */
 
@@ -67,29 +72,26 @@ static const scale_profile_t PROFILE_500KG =
 
 static lv_obj_t *reset_msgbox = NULL;
 
+
+
 static void reset_confirm_cb(lv_event_t *e)
 {
     lv_obj_t *obj = lv_event_get_target(e);
     const char *txt = lv_msgbox_get_active_btn_text(obj);
 
-    if(strcmp(txt,"YES")==0)
-    {
-        Serial.println("[RESET] Confirmed");
-
-        /* HARD RESET */
-        storage_clear_all_records();
-
-        uint32_t id = 1;
-        storage_save_invoice(id);
-        invoice_service_init();
-
-        home_screen_update_history();
-        home_screen_set_invoice(invoice_service_current_id());
-    }
-
+    // Close msgbox FIRST and safely
     lv_msgbox_close(obj);
     reset_msgbox = NULL;
+
+    if (txt && strcmp(txt, "YES") == 0)
+    {
+        Serial.println("[RESET] Confirmed");
+        ui_frozen = true;
+        reset_pending = true;
+    }
 }
+
+
 
 static void show_reset_confirm_popup()
 {
@@ -97,7 +99,7 @@ static void show_reset_confirm_popup()
 
     static const char *btns[] = {"YES","NO",""};
 
-    reset_msgbox = lv_msgbox_create(NULL,
+    reset_msgbox = lv_msgbox_create(lv_scr_act(),
         "CONFIRM RESET",
         "Do you want to clear today's complete history?",
         btns,
@@ -174,9 +176,24 @@ static void back_cb(void)
 
 static void calibration_wizard_event(int evt)
 {
-    if(evt == CAL_EVT_BACK)
+    switch (evt)
     {
-        lv_scr_load(settings_scr);
+        case CAL_EVT_BACK:
+            lv_scr_load(settings_scr);
+            break;
+
+        case CAL_EVT_CAPTURE_ZERO:
+            scale_service_tare();
+            Serial.println("[CAL] Tare");
+            break;
+
+        case CAL_EVT_CAPTURE_LOAD:
+            Serial.println("[CAL] Capture load (TODO)");
+            break;
+
+        case CAL_EVT_SAVE:
+            Serial.println("[CAL] Save calibration (TODO)");
+            break;
     }
 }
 
@@ -208,16 +225,26 @@ static void calib_both()
 
 static void update_weight()
 {
+    if (ui_frozen) return;   // 🔥 ABSOLUTE RULE
+
     weight = scale_service_get_weight();
 
-    home_screen_set_weight(weight);
-    home_screen_set_total(weight * qty);
-    calibration_screen_set_live(
-    weight,
-    scale_service_get_raw()   // NEW industrial raw read
-);
+    if (lv_scr_act() == home_scr)
+    {
+        home_screen_set_weight(weight);
+        home_screen_set_total(weight * qty);
+    }
 
+    if (lv_scr_act() == cal_scr)
+    {
+        calibration_screen_set_live(
+            weight,
+            scale_service_get_raw()
+        );
+    }
 }
+
+
 
 /* =========================================================
    SETUP
@@ -232,6 +259,7 @@ void setup()
 
     lvgl_port_init();
 
+    ui_styles_init();
     storage_service_init();
     invoice_service_init();
     wifi_service_init();
@@ -275,6 +303,24 @@ void setup()
 
 void loop()
 {
+    if (reset_pending)
+{
+    reset_pending = false;
+
+    storage_clear_all_records();
+
+    uint32_t id = 1;
+    storage_save_invoice(id);
+    invoice_service_init();
+
+    home_screen_update_history();
+    home_screen_set_invoice(invoice_service_current_id());
+
+    ui_frozen = false;
+
+    Serial.println("[RESET] Completed safely");
+}
+
     lvgl_port_loop();
 
     update_weight();

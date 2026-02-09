@@ -37,8 +37,6 @@ void home_screen_register_callback(void (*cb)(int evt))
 
 void home_screen_create(lv_obj_t *parent)
 {
-    ui_styles_init();
-
     lv_obj_add_style(parent,&g_styles.screen,0);
     lv_obj_set_size(parent,800,480);
 

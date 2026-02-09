@@ -15,3 +15,5 @@ void calibration_screen_create(lv_obj_t *parent);
 void calibration_screen_set_live(float weight, long raw);
 
 void calibration_screen_register_callback(void (*cb)(int evt));
+void calibration_screen_set_profile(const char *name);
+

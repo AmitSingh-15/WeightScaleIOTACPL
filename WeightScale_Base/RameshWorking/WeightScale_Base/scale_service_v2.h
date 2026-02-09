@@ -19,3 +19,5 @@ bool  scale_service_is_hold();
 
 void scale_service_tare();
 long scale_service_get_raw();
+const scale_profile_t* scale_service_get_profile();
+void scale_service_update();
