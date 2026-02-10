@@ -72,44 +72,6 @@ static const scale_profile_t PROFILE_500KG =
 
 static lv_obj_t *reset_msgbox = NULL;
 
-
-
-static void reset_confirm_cb(lv_event_t *e)
-{
-    lv_obj_t *obj = lv_event_get_target(e);
-    const char *txt = lv_msgbox_get_active_btn_text(obj);
-
-    // Close msgbox FIRST and safely
-    lv_msgbox_close(obj);
-    reset_msgbox = NULL;
-
-    if (txt && strcmp(txt, "YES") == 0)
-    {
-        Serial.println("[RESET] Confirmed");
-        ui_frozen = true;
-        reset_pending = true;
-    }
-}
-
-
-
-static void show_reset_confirm_popup()
-{
-    if(reset_msgbox) return;
-
-    static const char *btns[] = {"YES","NO",""};
-
-    reset_msgbox = lv_msgbox_create(lv_scr_act(),
-        "CONFIRM RESET",
-        "Do you want to clear today's complete history?",
-        btns,
-        true);
-
-    lv_obj_center(reset_msgbox);
-    lv_obj_add_event_cb(reset_msgbox, reset_confirm_cb,
-                        LV_EVENT_VALUE_CHANGED, NULL);
-}
-
 /* =========================================================
    UI EVENTS
 =========================================================*/
@@ -152,11 +114,21 @@ static void ui_event(int evt)
         }
     }
 
-    /* 🔥 INDUSTRIAL RESET FLOW */
     if (evt == UI_EVT_RESET)
     {
-        show_reset_confirm_popup();
+        Serial.println("[RESET] Direct industrial reset");
+
+        /* IMPORTANT: Do NOT touch LVGL objects here except labels */
+        storage_clear_all_records();
+
+        uint32_t id = 1;
+        storage_save_invoice(id);
+        invoice_service_init();
+
+        home_screen_update_history();
+        home_screen_set_invoice(invoice_service_current_id());
     }
+
 }
 
 /* =========================================================
@@ -181,6 +153,17 @@ static void calibration_wizard_event(int evt)
         case CAL_EVT_BACK:
             lv_scr_load(settings_scr);
             break;
+        case CAL_EVT_PROFILE_1KG:
+            scale_service_set_profile(&PROFILE_1KG);
+            break;
+
+        case CAL_EVT_PROFILE_100KG:
+            scale_service_set_profile(&PROFILE_100KG);
+            break;
+
+        case CAL_EVT_PROFILE_500KG:
+            scale_service_set_profile(&PROFILE_500KG);
+            break;    
 
         case CAL_EVT_CAPTURE_ZERO:
             scale_service_tare();
@@ -303,24 +286,6 @@ void setup()
 
 void loop()
 {
-    if (reset_pending)
-{
-    reset_pending = false;
-
-    storage_clear_all_records();
-
-    uint32_t id = 1;
-    storage_save_invoice(id);
-    invoice_service_init();
-
-    home_screen_update_history();
-    home_screen_set_invoice(invoice_service_current_id());
-
-    ui_frozen = false;
-
-    Serial.println("[RESET] Completed safely");
-}
-
     lvgl_port_loop();
 
     update_weight();
@@ -337,3 +302,5 @@ void loop()
         );
     }
 }
+
+

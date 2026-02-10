@@ -31,24 +31,60 @@ static void scale_task(void *p)
 {
     scale.begin(HX711_DOUT, HX711_SCK);
     delay(2000);
+
     scale.set_scale(activeProfile.scale);
     scale.tare();
+
+    const int SAMPLE_COUNT = 8;     // 🔥 industrial averaging window
+    float samples[SAMPLE_COUNT];
+    int index = 0;
+    bool buffer_full = false;
+
+    float last_valid = 0;
 
     while (true)
     {
         if (scale.is_ready())
         {
-            float w = scale.get_units(3);
+            /* ===== READ RAW WEIGHT ===== */
+            float w = scale.get_units(1);
             if (w < 0) w = 0;
 
-            filtered_weight = ema(
-                filtered_weight,
-                w,
-                activeProfile.ema_alpha
-            );
+            /* ===== STORE IN ROLLING BUFFER ===== */
+            samples[index++] = w;
+
+            if(index >= SAMPLE_COUNT)
+            {
+                index = 0;
+                buffer_full = true;
+            }
+
+            /* ===== ONLY PROCESS WHEN BUFFER READY ===== */
+            if(buffer_full)
+            {
+                /* ---------- AVERAGE ---------- */
+                float sum = 0;
+                for(int i=0;i<SAMPLE_COUNT;i++)
+                    sum += samples[i];
+
+                float avg = sum / SAMPLE_COUNT;
+
+                /* ---------- SPIKE REJECTION ---------- */
+                if(fabs(avg - last_valid) > activeProfile.hold_threshold)
+                {
+                    last_valid = avg;
+                }
+
+                /* ---------- EMA SMOOTH ---------- */
+                filtered_weight = ema(
+                    filtered_weight,
+                    last_valid,
+                    activeProfile.ema_alpha
+                );
+            }
         }
 
-        vTaskDelay(pdMS_TO_TICKS(40));
+        vTaskDelay(pdMS_TO_TICKS(25));   // faster loop = smoother response
     }
 }
 
@@ -58,7 +94,7 @@ void scale_service_init()
     xTaskCreatePinnedToCore(
         scale_task,
         "scaleTask",
-        8192,
+        12288  ,
         NULL,
         1,
         &scaleTaskHandle,
