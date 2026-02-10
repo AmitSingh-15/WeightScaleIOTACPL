@@ -3,6 +3,8 @@
 #include "ui_events.h"
 #include "invoice_service.h"
 #include "storage_service.h"
+#include "wifi_service.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -15,7 +17,6 @@ static lv_obj_t *lbl_invoice;
 static lv_obj_t *history_lbl[10];
 static lv_obj_t *lbl_sync;
 static lv_obj_t *lbl_device;
-
 
 static void (*event_cb)(int evt) = NULL;
 
@@ -42,15 +43,13 @@ void home_screen_create(lv_obj_t *parent)
     lv_obj_add_style(parent,&g_styles.screen,0);
     lv_obj_set_size(parent,800,480);
 
-    /* =====================================================
-       TOP HEADER 20%
-    =====================================================*/
+    /* ===== HEADER ===== */
+
     lv_obj_t *header = lv_obj_create(parent);
     lv_obj_add_style(header,&g_styles.card,0);
-    lv_obj_set_size(header,800,96);     // 20% of 480
+    lv_obj_set_size(header,800,96);
     lv_obj_align(header,LV_ALIGN_TOP_MID,0,0);
 
-    /* brand left */
     lv_obj_t *brand = lv_label_create(header);
     lv_label_set_text(brand,"ACPL delivering progress");
     lv_obj_align(brand,LV_ALIGN_LEFT_MID,10,-10);
@@ -59,7 +58,6 @@ void home_screen_create(lv_obj_t *parent)
     lv_label_set_text(power,"powered by Vastotech");
     lv_obj_align(power,LV_ALIGN_LEFT_MID,10,12);
 
-    /* BIG CENTER INVOICE */
     lbl_invoice = lv_label_create(header);
     lv_obj_set_style_text_font(lbl_invoice,&lv_font_montserrat_20,0);
     lv_label_set_text(lbl_invoice,"Invoice #1");
@@ -70,28 +68,26 @@ void home_screen_create(lv_obj_t *parent)
     lv_label_set_text(lbl_device,"DeviceID: -");
     lv_obj_align(lbl_device,LV_ALIGN_CENTER,0,26);
 
+    lbl_sync = lv_label_create(header);
+    lv_label_set_text(lbl_sync,"Offline");
+    lv_obj_align(lbl_sync,LV_ALIGN_RIGHT_MID,-120,0);
 
-    /* SETTINGS BUTTON RIGHT */
     lv_obj_t *settings_btn = lv_btn_create(header);
     lv_obj_add_style(settings_btn,&g_styles.btn_secondary,0);
     lv_obj_align(settings_btn,LV_ALIGN_RIGHT_MID,-15,0);
     lv_obj_add_event_cb(settings_btn,btn_event_cb,LV_EVENT_CLICKED,(void*)UI_EVT_SETTINGS);
     lv_label_set_text(lv_label_create(settings_btn),"SET");
 
-    /* =====================================================
-       MIDDLE AREA 60%
-    =====================================================*/
+    /* ===== MIDDLE ===== */
 
     lv_obj_t *middle = lv_obj_create(parent);
     lv_obj_remove_style_all(middle);
-    lv_obj_set_size(middle,800,288);  // 60%
+    lv_obj_set_size(middle,800,288);
     lv_obj_align(middle,LV_ALIGN_TOP_MID,0,96);
-
-    /* ---------- LEFT WEIGHT (60% width) ---------- */
 
     lv_obj_t *left = lv_obj_create(middle);
     lv_obj_add_style(left,&g_styles.card,0);
-    lv_obj_set_size(left,480,288); // 60%
+    lv_obj_set_size(left,480,288);
     lv_obj_align(left,LV_ALIGN_LEFT_MID,0,0);
 
     lbl_weight = lv_label_create(left);
@@ -112,11 +108,11 @@ void home_screen_create(lv_obj_t *parent)
     lbl_total = lv_label_create(info_row);
     lv_label_set_text(lbl_total,"Total: 0.00 kg");
 
-    /* ---------- RIGHT HISTORY (40% width) ---------- */
+    /* ===== HISTORY ===== */
 
     lv_obj_t *hist = lv_obj_create(middle);
     lv_obj_add_style(hist,&g_styles.card,0);
-    lv_obj_set_size(hist,320,288); // 40%
+    lv_obj_set_size(hist,320,288);
     lv_obj_align(hist,LV_ALIGN_RIGHT_MID,0,0);
 
     lv_label_set_text(lv_label_create(hist),"Last 10");
@@ -128,13 +124,11 @@ void home_screen_create(lv_obj_t *parent)
         lv_obj_align(history_lbl[i],LV_ALIGN_TOP_LEFT,10,30 + (i*22));
     }
 
-    /* =====================================================
-       BOTTOM ACTION BAR 20%
-    =====================================================*/
+    /* ===== ACTION BAR ===== */
 
     lv_obj_t *action = lv_obj_create(parent);
     lv_obj_add_style(action,&g_styles.card,0);
-    lv_obj_set_size(action,800,96);   // 20%
+    lv_obj_set_size(action,800,96);
     lv_obj_align(action,LV_ALIGN_BOTTOM_MID,0,0);
 
     lv_obj_set_flex_flow(action,LV_FLEX_FLOW_ROW);
@@ -157,8 +151,6 @@ void home_screen_create(lv_obj_t *parent)
     for(int i=0;i<7;i++)
     {
         lv_obj_t *b = lv_btn_create(action);
-
-        /* 🔥 wider industrial buttons */
         lv_obj_set_size(b,100,70);
 
         if(i>=5)
@@ -167,7 +159,6 @@ void home_screen_create(lv_obj_t *parent)
             lv_obj_add_style(b,&g_styles.btn_secondary,0);
 
         lv_obj_add_event_cb(b,btn_event_cb,LV_EVENT_CLICKED,(void*)btns[i].evt);
-
         lv_label_set_text(lv_label_create(b),btns[i].txt);
     }
 }
@@ -206,7 +197,8 @@ void home_screen_set_invoice(uint32_t id)
 
 void home_screen_set_sync_status(const char *txt)
 {
-    if(lbl_sync) lv_label_set_text(lbl_sync,txt);
+    if(!lbl_sync) return;
+    lv_label_set_text(lbl_sync,txt);
 }
 
 void home_screen_set_device(const char *name)
@@ -217,7 +209,6 @@ void home_screen_set_device(const char *name)
     snprintf(buf,sizeof(buf),"DeviceID: %s",name);
     lv_label_set_text(lbl_device,buf);
 }
-
 
 void home_screen_update_history(void)
 {

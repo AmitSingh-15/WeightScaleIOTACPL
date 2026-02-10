@@ -35,6 +35,7 @@ static uint16_t qty = 1;
 static float weight = 0.0f;
 static bool ui_frozen = false;
 static bool reset_pending = false;
+bool wifi_critical_section = false;
 
 /* Industrial scale profiles */
 
@@ -324,7 +325,10 @@ void setup()
 
 void loop()
 {
-    lvgl_port_loop();
+    if(!wifi_critical_section)
+    {
+        lvgl_port_loop();
+    }
 
     update_weight();
 
