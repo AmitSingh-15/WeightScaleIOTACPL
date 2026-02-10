@@ -115,3 +115,29 @@ uint32_t storage_get_record_count(void)
 {
     return prefs.getUInt("rec_count", 0);
 }
+
+/* =========================================================
+   DEVICE NAME STORAGE
+=========================================================*/
+
+void storage_save_device_name(const char *name)
+{
+    if(!name) return;
+
+    prefs.putString("dev_name", name);
+}
+
+bool storage_load_device_name(char *out, size_t max)
+{
+    if(!out || max == 0) return false;
+
+    String n = prefs.getString("dev_name", "");
+
+    if(n.length() == 0)
+        return false;
+
+    strncpy(out, n.c_str(), max);
+    out[max-1] = 0;
+
+    return true;
+}

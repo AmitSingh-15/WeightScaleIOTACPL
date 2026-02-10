@@ -14,6 +14,8 @@ static lv_obj_t *lbl_total;
 static lv_obj_t *lbl_invoice;
 static lv_obj_t *history_lbl[10];
 static lv_obj_t *lbl_sync;
+static lv_obj_t *lbl_device;
+
 
 static void (*event_cb)(int evt) = NULL;
 
@@ -62,6 +64,12 @@ void home_screen_create(lv_obj_t *parent)
     lv_obj_set_style_text_font(lbl_invoice,&lv_font_montserrat_20,0);
     lv_label_set_text(lbl_invoice,"Invoice #1");
     lv_obj_align(lbl_invoice,LV_ALIGN_CENTER,0,0);
+
+    lbl_device = lv_label_create(header);
+    lv_obj_set_style_text_font(lbl_device,&lv_font_montserrat_14,0);
+    lv_label_set_text(lbl_device,"DeviceID: -");
+    lv_obj_align(lbl_device,LV_ALIGN_CENTER,0,26);
+
 
     /* SETTINGS BUTTON RIGHT */
     lv_obj_t *settings_btn = lv_btn_create(header);
@@ -200,6 +208,16 @@ void home_screen_set_sync_status(const char *txt)
 {
     if(lbl_sync) lv_label_set_text(lbl_sync,txt);
 }
+
+void home_screen_set_device(const char *name)
+{
+    if(!lbl_device) return;
+
+    static char buf[64];
+    snprintf(buf,sizeof(buf),"DeviceID: %s",name);
+    lv_label_set_text(lbl_device,buf);
+}
+
 
 void home_screen_update_history(void)
 {

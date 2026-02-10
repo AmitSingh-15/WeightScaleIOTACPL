@@ -23,3 +23,8 @@ uint32_t storage_get_record_count(void);
 uint8_t storage_get_last_records(invoice_record_t *out, uint8_t max);
 void storage_check_new_day_and_reset(void);
 void storage_clear_all_records(void);
+/* ===== DEVICE NAME STORAGE ===== */
+
+void storage_save_device_name(const char *name);
+bool storage_load_device_name(char *out, size_t max);
+

@@ -21,6 +21,8 @@
 #include "scale_service_v2.h"
 #include "ui_events.h"
 #include "ui_styles.h"
+#include "device_name_screen.h"
+
 /* =========================================================
    GLOBAL STATE
 =========================================================*/
@@ -65,6 +67,10 @@ static const scale_profile_t PROFILE_500KG =
     0.08f,
     1800
 };
+
+static lv_obj_t *device_scr = NULL;
+static char device_name[64] = {0};
+
 
 /* =========================================================
    RESET CONFIRMATION POPUP (INDUSTRIAL)
@@ -145,6 +151,22 @@ static void back_cb(void)
 {
     lv_scr_load(home_scr);
 }
+
+static void device_name_saved(int evt, const char *name)
+{
+    if(evt != DEVNAME_EVT_SAVE) return;
+
+    Serial.printf("[DEV] Saved: %s\n", name);
+
+    storage_save_device_name(name);
+
+    /* ✅ CRITICAL — update UI NOW */
+    home_screen_set_device(name);
+
+    lv_scr_load(home_scr);
+}
+
+
 
 static void calibration_wizard_event(int evt)
 {
@@ -277,7 +299,23 @@ void setup()
     home_screen_set_invoice(invoice_service_current_id());
     home_screen_update_history();
 
-    lv_scr_load(home_scr);
+    device_scr = lv_obj_create(NULL);
+    device_name_screen_create(device_scr);
+    device_name_screen_register_callback(device_name_saved);
+
+
+    if(storage_load_device_name(device_name,sizeof(device_name)))
+    {
+        Serial.println("[DEVICE] Existing name found");
+        home_screen_set_device(device_name);
+        lv_scr_load(home_scr);
+    }
+    else
+    {
+        Serial.println("[DEVICE] First boot — asking name");
+        lv_scr_load(device_scr);
+    }
+
 }
 
 /* =========================================================

@@ -10,3 +10,4 @@ void home_screen_set_total(float total);
 void home_screen_set_invoice(uint32_t id);
 void home_screen_set_sync_status(const char *txt);
 void home_screen_update_history(void);
+void home_screen_set_device(const char *name);
