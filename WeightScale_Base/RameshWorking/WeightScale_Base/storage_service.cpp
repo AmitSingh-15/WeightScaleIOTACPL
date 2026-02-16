@@ -141,3 +141,18 @@ bool storage_load_device_name(char *out, size_t max)
 
     return true;
 }
+
+bool storage_get_record_by_index(uint32_t index, invoice_record_t *out)
+{
+    if(!out) return false;
+
+    uint32_t count = storage_get_record_count();
+    if(index >= count) return false;
+
+    char key[16];
+    snprintf(key, sizeof(key), "rec_%lu", index);
+
+    size_t read = prefs.getBytes(key, out, sizeof(invoice_record_t));
+
+    return read == sizeof(invoice_record_t);
+}

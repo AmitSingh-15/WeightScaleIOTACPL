@@ -57,6 +57,5 @@ bool invoice_service_save(float weight,
 
     if (out) *out = rec;
 
-    invoice_service_next();
-    return true;
+    return true;   // 🔥 DO NOT increment here
 }

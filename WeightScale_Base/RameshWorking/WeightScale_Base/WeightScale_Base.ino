@@ -23,6 +23,8 @@
 #include "ui_events.h"
 #include "ui_styles.h"
 #include "device_name_screen.h"
+#include "history_screen.h"
+
 
 /* =========================================================
    GLOBAL STATE
@@ -37,6 +39,8 @@ static float weight = 0.0f;
 static bool ui_frozen = false;
 static bool reset_pending = false;
 bool wifi_critical_section = false;
+static lv_obj_t *history_scr = NULL;
+
 
 /* Industrial scale profiles */
 
@@ -100,56 +104,76 @@ static void ui_event(int evt)
     if (evt == UI_EVT_SETTINGS)
         lv_scr_load(settings_scr);
 
-    if (evt == UI_EVT_QTY_INC) qty++;
-    if (evt == UI_EVT_QTY_DEC && qty > 1) qty--;
-
-    if (evt == UI_EVT_QTY_X2)  qty += 2;
-    if (evt == UI_EVT_QTY_X5)  qty += 5;
-    if (evt == UI_EVT_QTY_X10) qty += 10;
-
-    if (evt == UI_EVT_QTY_INC ||
-        evt == UI_EVT_QTY_DEC ||
-        evt == UI_EVT_QTY_X2  ||
-        evt == UI_EVT_QTY_X5  ||
-        evt == UI_EVT_QTY_X10)
+    if (evt == UI_EVT_HISTORY)
     {
+        history_screen_refresh();
+        lv_scr_load(history_scr);
+    }
+
+    if (evt == UI_EVT_QTY_INC)
+    {
+        qty++;
         home_screen_set_quantity(qty);
-        home_screen_set_total(weight * qty);
+    }
+
+    if (evt == UI_EVT_QTY_DEC && qty > 1)
+    {
+        qty--;
+        home_screen_set_quantity(qty);
     }
 
     if (evt == UI_EVT_SAVE)
     {
-      
-        invoice_record_t rec;
-
-        if (invoice_service_save(weight, qty, ENTRY_MANUAL, &rec))
+        if(invoice_session_add(weight, qty))
         {
-            home_screen_set_invoice(invoice_service_current_id());
-
+            home_screen_refresh_invoice_details();
             qty = 1;
             home_screen_set_quantity(qty);
-            home_screen_set_total(weight * qty);
-
-            home_screen_update_history();
         }
     }
 
     if (evt == UI_EVT_RESET)
     {
-        Serial.println("[RESET] Direct industrial reset");
-
-        /* IMPORTANT: Do NOT touch LVGL objects here except labels */
-        storage_clear_all_records();
-
-        uint32_t id = 1;
-        storage_save_invoice(id);
-        invoice_service_init();
-
-        home_screen_update_history();
+        invoice_session_commit();
+        invoice_service_next();
         home_screen_set_invoice(invoice_service_current_id());
+        home_screen_refresh_invoice_details();
     }
 
+    if(evt == UI_EVT_RESET_ALL)
+    {
+        invoice_session_clear();
+        storage_clear_all_records();
+
+        /* RESET INVOICE TO 1 */
+        storage_save_invoice(1);
+        invoice_service_init();
+
+        home_screen_set_invoice(invoice_service_current_id());
+        home_screen_refresh_invoice_details();
+    }
+
+    if(evt == 1002)
+    {
+        qty *= 2;
+        home_screen_set_quantity(qty);
+    }
+
+    if(evt == 1005)
+    {
+        qty *= 5;
+        home_screen_set_quantity(qty);
+    }
+
+    if(evt == 1010)
+    {
+        qty *= 10;
+        home_screen_set_quantity(qty);
+    }
+
+
 }
+
 
 /* =========================================================
    SCREEN NAVIGATION
@@ -251,7 +275,6 @@ static void update_weight()
     if (lv_scr_act() == home_scr)
     {
         home_screen_set_weight(weight);
-        home_screen_set_total(weight * qty);
     }
 
     if (lv_scr_act() == cal_scr)
@@ -261,6 +284,13 @@ static void update_weight()
             scale_service_get_raw()
         );
     }
+    static float last_weight = 0;
+
+    static float stable_weight = 0;
+    static uint32_t stable_start = 0;
+
+    last_weight = weight;
+
 }
 
 
@@ -283,6 +313,7 @@ void setup()
     invoice_service_init();
     wifi_service_init();
     ota_service_init();
+    invoice_session_init();
 
     /* START RTOS SCALE SERVICE */
     scale_service_init();
@@ -309,10 +340,7 @@ void setup()
 
     home_screen_set_quantity(qty);
     home_screen_set_weight(0);
-    home_screen_set_total(0);
     home_screen_set_invoice(invoice_service_current_id());
-    home_screen_update_history();
-
     device_scr = lv_obj_create(NULL);
     device_name_screen_create(device_scr);
     device_name_screen_register_callback(device_name_saved);
@@ -329,6 +357,10 @@ void setup()
         Serial.println("[DEVICE] First boot — asking name");
         lv_scr_load(device_scr);
     }
+    history_scr = lv_obj_create(NULL);
+    history_screen_create(history_scr);
+    history_screen_register_back(back_cb);
+
 
 }
 

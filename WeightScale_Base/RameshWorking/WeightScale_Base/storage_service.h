@@ -28,3 +28,4 @@ void storage_clear_all_records(void);
 void storage_save_device_name(const char *name);
 bool storage_load_device_name(char *out, size_t max);
 
+bool storage_get_record_by_index(uint32_t index, invoice_record_t *out);
