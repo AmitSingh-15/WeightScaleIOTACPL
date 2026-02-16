@@ -91,7 +91,7 @@ void home_screen_create(lv_obj_t *parent)
     lv_obj_align(left,LV_ALIGN_LEFT_MID,0,0);
 
     lbl_weight = lv_label_create(left);
-    lv_label_set_text(lbl_weight,"0.00 kg");
+    lv_label_set_text(lbl_weight,"0.000 kg");
     lv_obj_set_style_text_font(lbl_weight,&lv_font_montserrat_48,0);
     lv_obj_align(lbl_weight,LV_ALIGN_TOP_MID,0,20);
 
@@ -170,7 +170,9 @@ void home_screen_create(lv_obj_t *parent)
 void home_screen_set_weight(float w)
 {
     static char buf[24];
-    snprintf(buf,sizeof(buf),"%.2f kg",w);
+   // snprintf(buf,sizeof(buf),"%.2f kg",w);
+       int value = (int)(w * 100);
+    lv_snprintf(buf, sizeof(buf), "%d.%03d kg", value / 100, abs(value % 100));
     lv_label_set_text(lbl_weight,buf);
 }
 
@@ -184,7 +186,10 @@ void home_screen_set_quantity(uint16_t qty)
 void home_screen_set_total(float total)
 {
     static char buf[24];
-    snprintf(buf,sizeof(buf),"Total: %.2f kg",total);
+    //snprintf(buf,sizeof(buf),"Total: %.2f kg",total);
+       int value = (int)(total * 100);
+    lv_snprintf(buf, sizeof(buf), "Total: %d.%03d kg", value / 100, abs(value % 100));
+    
     lv_label_set_text(lbl_total,buf);
 }
 
@@ -221,7 +226,7 @@ void home_screen_update_history(void)
         {
             static char buf[48];
             snprintf(buf,sizeof(buf),
-                     "#%lu  %.2fkg  x%d",
+                     "#%lu  %.3fkg  x%d",
                      recs[i].invoice_id,
                      recs[i].weight,
                      recs[i].quantity);

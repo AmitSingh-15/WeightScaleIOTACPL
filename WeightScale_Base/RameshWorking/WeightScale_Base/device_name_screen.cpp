@@ -59,8 +59,7 @@ void device_name_screen_create(lv_obj_t *parent)
 
     lbl_title = lv_label_create(parent);
     lv_label_set_text(lbl_title, "ENTER DEVICE NAME");
-    lv_obj_set_style_text_font(lbl_title,
-                               &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_font(lbl_title,&lv_font_montserrat_20, 0);
     lv_obj_align(lbl_title, LV_ALIGN_TOP_MID, 0, 40);
 
     /* ================= TEXTAREA ================= */
@@ -90,10 +89,13 @@ void device_name_screen_create(lv_obj_t *parent)
     lv_obj_set_size(btn_save, 220, 70);
     lv_obj_align(btn_save, LV_ALIGN_TOP_MID, 0, 200);
 
-    lv_obj_add_event_cb(btn_save,
-                        save_clicked,
-                        LV_EVENT_CLICKED,
-                        NULL);
+    /* 🔥 FIX: CLICKED → RELEASED (touch-safe) */
+    lv_obj_add_event_cb(
+        btn_save,
+        save_clicked,
+        LV_EVENT_RELEASED,
+        NULL
+    );
 
     lv_label_set_text(
         lv_label_create(btn_save),
@@ -108,7 +110,7 @@ void device_name_screen_create(lv_obj_t *parent)
 
     lv_keyboard_set_mode(kb, LV_KEYBOARD_MODE_TEXT_UPPER);
 
-    /* 🔥 THIS LINKS KEYBOARD TO TEXTAREA */
+    /* Link keyboard to textarea */
     lv_keyboard_set_textarea(kb, ta_name);
 
     lv_obj_add_event_cb(kb, kb_event, LV_EVENT_ALL, NULL);

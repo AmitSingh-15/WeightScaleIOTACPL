@@ -1,3 +1,4 @@
+
 #define ARDUINO_USB_CDC_ON_BOOT 1
 #define LV_CONF_INCLUDE_SIMPLE
 
@@ -41,9 +42,9 @@ bool wifi_critical_section = false;
 
 static const scale_profile_t PROFILE_1KG =
 {
-    "1KG",
+    "RAW",
     1.0f,
-    9000.0f,
+    1.0,
     0.35f,
     0.002f,
     500
@@ -51,22 +52,33 @@ static const scale_profile_t PROFILE_1KG =
 
 static const scale_profile_t PROFILE_100KG =
 {
-    "100KG",
-    100.0f,
-    2280.0f,
-    0.25f,
-    0.02f,
-    1200
+    "1KG",
+   // 100.0f,
+    //2280.0f,
+    //0.25f,
+    //0.02f,
+    //1200
+    1.0f,
+    58281.3,
+    0.35f,
+    0.002f,
+    500
 };
 
 static const scale_profile_t PROFILE_500KG =
 {
     "500KG",
-    500.0f,
-    450.0f,
-    0.15f,
-    0.08f,
-    1800
+   // 500.0f,
+    //49000.0f,
+    //0.15f,
+    //0.08f,
+    //1800
+     1.0f,
+    //61287.5,
+      58281.3,
+    0.35f,
+    0.002f,
+    500
 };
 
 static lv_obj_t *device_scr = NULL;
@@ -107,6 +119,7 @@ static void ui_event(int evt)
 
     if (evt == UI_EVT_SAVE)
     {
+      
         invoice_record_t rec;
 
         if (invoice_service_save(weight, qty, ENTRY_MANUAL, &rec))
@@ -344,5 +357,3 @@ void loop()
         );
     }
 }
-
-

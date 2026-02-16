@@ -58,11 +58,11 @@ void calibration_screen_create(lv_obj_t *parent)
 
     lbl_weight = lv_label_create(live);
     lv_obj_add_style(lbl_weight,&g_styles.value_big,0);
-    lv_label_set_text(lbl_weight,"0.00 kg");
+    lv_label_set_text(lbl_weight,"0.000 kg");
     lv_obj_align(lbl_weight,LV_ALIGN_CENTER,0,-10);
 
     lbl_raw = lv_label_create(live);
-    lv_label_set_text(lbl_raw,"RAW: 0");
+    lv_label_set_text(lbl_raw,"RAW: 0.000 kg");
     lv_obj_align(lbl_raw,LV_ALIGN_BOTTOM_MID,0,-10);
 
     /* ===== PROFILE SELECT ===== */
@@ -78,8 +78,8 @@ void calibration_screen_create(lv_obj_t *parent)
         const char* txt;
         int evt;
     } profiles[] = {
-        {"1KG", CAL_EVT_PROFILE_1KG},
-        {"100KG", CAL_EVT_PROFILE_100KG},
+        {"RAW", CAL_EVT_PROFILE_1KG},
+        {"1KG", CAL_EVT_PROFILE_100KG},
         {"500KG", CAL_EVT_PROFILE_500KG}
     };
 
@@ -125,7 +125,7 @@ void calibration_screen_create(lv_obj_t *parent)
 =====================================================*/
 
 
-void calibration_screen_set_live(float weight,long raw)
+void calibration_screen_set_live(float weight,float raw)
 {
     /* 🔥 HARD SAFETY CHECKS */
     if(!lbl_profile || !lv_obj_is_valid(lbl_profile)) return;
@@ -143,11 +143,15 @@ void calibration_screen_set_live(float weight,long raw)
     lv_label_set_text(lbl_profile,pbuf);
 
     static char wbuf[32];
-    snprintf(wbuf,sizeof(wbuf),"%.3f kg",weight);
+    //snprintf(wbuf,sizeof(wbuf),"%.3f kg",weight);
+    int value = (int)(weight * 100);
+    lv_snprintf(wbuf, sizeof(wbuf), "%d.%03d kg", value / 100, abs(value % 100));
+    
     lv_label_set_text(lbl_weight,wbuf);
 
     static char rbuf[32];
-    snprintf(rbuf,sizeof(rbuf),"RAW: %ld",raw);
+    //snprintf(rbuf,sizeof(rbuf),"RAW: %ld",raw);
+    int value1 = (int)(raw * 100);
+    lv_snprintf(rbuf, sizeof(rbuf), "%d.%03d", value1 / 100, abs(value1 % 100));
     lv_label_set_text(lbl_raw,rbuf);
 }
-

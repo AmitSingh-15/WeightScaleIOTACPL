@@ -10,11 +10,17 @@ static HX711 scale;
 static scale_profile_t activeProfile =
 {
     "DEFAULT",
-    100.0f,
-    2280.0f,
-    0.25f,
-    0.02f,
-    1200
+    //100.0f,
+    //2280.0f,
+    //0.25f,
+    //0.02f,
+    //1200
+      1.0f,
+    //61287.5,
+      58281.3,
+    0.35f,
+    0.002f,
+    500
 };
 
 static float filtered_weight = 0;
@@ -48,7 +54,7 @@ static void scale_task(void *p)
         {
             /* ===== READ RAW WEIGHT ===== */
             float w = scale.get_units(1);
-            if (w < 0) w = 0;
+            if (w < 0.001) w = 0.000;
 
             /* ===== STORE IN ROLLING BUFFER ===== */
             samples[index++] = w;
