@@ -38,9 +38,9 @@ void home_screen_create(lv_obj_t *parent)
     lv_obj_align(header,LV_ALIGN_TOP_MID,0,0);
 
     lbl_invoice = lv_label_create(header);
-    lv_obj_set_style_text_font(lbl_invoice,&lv_font_montserrat_20,0);
+    lv_obj_set_style_text_font(lbl_invoice,&lv_font_montserrat_24,0);
     lv_label_set_text(lbl_invoice,"Invoice #1");
-    lv_obj_align(lbl_invoice,LV_ALIGN_CENTER,0,-15);
+    lv_obj_align(lbl_invoice,LV_ALIGN_CENTER,-45,-5);
 
     lbl_sync = lv_label_create(header);
     lv_label_set_text(lbl_sync,"Offline");
@@ -50,23 +50,34 @@ void home_screen_create(lv_obj_t *parent)
     lv_label_set_text(lbl_device,"Device: -");
     lv_obj_align(lbl_device,LV_ALIGN_LEFT_MID,15,15);
 
+    /* HISTORY */
     lv_obj_t *history_btn = lv_btn_create(header);
     lv_obj_set_size(history_btn,80,40);
-    lv_obj_align(history_btn,LV_ALIGN_RIGHT_MID,-180,0);
+    lv_obj_align(history_btn,LV_ALIGN_RIGHT_MID,-260,0);
     lv_obj_add_event_cb(history_btn,btn_event_cb,LV_EVENT_CLICKED,(void*)UI_EVT_HISTORY);
     lv_label_set_text(lv_label_create(history_btn),"HIS");
 
+    /* CALIBRATION */
+    lv_obj_t *cal_btn = lv_btn_create(header);
+    lv_obj_set_size(cal_btn,80,40);
+    lv_obj_align(cal_btn,LV_ALIGN_RIGHT_MID,-180,0);
+    lv_obj_add_event_cb(cal_btn,btn_event_cb,LV_EVENT_CLICKED,(void*)2001);
+    lv_label_set_text(lv_label_create(cal_btn),"CAL");
+
+    /* CLEAR */
     lv_obj_t *clear_btn = lv_btn_create(header);
     lv_obj_set_size(clear_btn,80,40);
     lv_obj_align(clear_btn,LV_ALIGN_RIGHT_MID,-100,0);
     lv_obj_add_event_cb(clear_btn,btn_event_cb,LV_EVENT_CLICKED,(void*)UI_EVT_RESET_ALL);
     lv_label_set_text(lv_label_create(clear_btn),"CLEAR");
 
+    /* SETTINGS (LOCKED) */
     lv_obj_t *settings_btn = lv_btn_create(header);
     lv_obj_set_size(settings_btn,80,40);
     lv_obj_align(settings_btn,LV_ALIGN_RIGHT_MID,-15,0);
     lv_obj_add_event_cb(settings_btn,btn_event_cb,LV_EVENT_CLICKED,(void*)UI_EVT_SETTINGS);
     lv_label_set_text(lv_label_create(settings_btn),"SET");
+
 
     /* ================= BODY ================= */
 

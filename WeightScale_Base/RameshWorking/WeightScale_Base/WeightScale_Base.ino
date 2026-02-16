@@ -95,6 +95,84 @@ static char device_name[64] = {0};
 
 static lv_obj_t *reset_msgbox = NULL;
 
+static lv_obj_t *admin_popup = NULL;
+static lv_obj_t *admin_ta = NULL;
+
+static void admin_close_async(void *p)
+{
+    if(admin_popup && lv_obj_is_valid(admin_popup))
+        lv_obj_del(admin_popup);
+
+    admin_popup = NULL;
+}
+
+static void admin_kb_event(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+
+    if(code == LV_EVENT_READY)
+    {
+        const char *pwd = lv_textarea_get_text(admin_ta);
+
+        if(strcmp(pwd,"1234") == 0)   // 🔐 CHANGE PASSWORD HERE
+        {
+            lv_async_call(admin_close_async,NULL);
+            lv_scr_load(settings_scr);
+        }
+        else
+        {
+            /* WRONG PASSWORD MESSAGE */
+            lv_async_call(admin_close_async,NULL);
+
+            lv_obj_t *msg = lv_msgbox_create(NULL,"ACCESS DENIED",
+                                             "Incorrect Password",
+                                             NULL,true);
+            lv_obj_center(msg);
+
+            lv_timer_t *t = lv_timer_create(
+                [](lv_timer_t *timer){
+                    lv_obj_del((lv_obj_t*)timer->user_data);
+                    lv_scr_load(home_scr);
+                    lv_timer_del(timer);
+                },
+                1500,
+                msg
+            );
+        }
+    }
+
+    if(code == LV_EVENT_CANCEL)
+    {
+        lv_async_call(admin_close_async,NULL);
+        lv_scr_load(home_scr);
+    }
+}
+
+
+static void show_admin_popup(void)
+{
+    admin_popup = lv_obj_create(NULL);
+    lv_obj_add_style(admin_popup,&g_styles.screen,0);
+
+    lv_obj_t *lbl = lv_label_create(admin_popup);
+    lv_label_set_text(lbl,"ENTER ADMIN PASSWORD");
+    lv_obj_align(lbl,LV_ALIGN_TOP_MID,0,40);
+
+    admin_ta = lv_textarea_create(admin_popup);
+    lv_textarea_set_password_mode(admin_ta,true);
+    lv_textarea_set_one_line(admin_ta,true);
+    lv_obj_set_width(admin_ta,400);
+    lv_obj_align(admin_ta,LV_ALIGN_TOP_MID,0,100);
+
+    lv_obj_t *kb = lv_keyboard_create(admin_popup);
+    lv_keyboard_set_textarea(kb,admin_ta);
+    lv_obj_add_event_cb(kb,admin_kb_event,LV_EVENT_ALL,NULL);
+    lv_obj_align(kb,LV_ALIGN_BOTTOM_MID,0,0);
+
+    lv_scr_load(admin_popup);
+}
+
+
 /* =========================================================
    UI EVENTS
 =========================================================*/
@@ -102,7 +180,9 @@ static lv_obj_t *reset_msgbox = NULL;
 static void ui_event(int evt)
 {
     if (evt == UI_EVT_SETTINGS)
-        lv_scr_load(settings_scr);
+    {
+        show_admin_popup();
+    }
 
     if (evt == UI_EVT_HISTORY)
     {
@@ -170,6 +250,10 @@ static void ui_event(int evt)
         qty *= 10;
         home_screen_set_quantity(qty);
     }
+    if(evt == 2001)
+    {
+        lv_scr_load(cal_scr);
+    }
 
 
 }
@@ -211,7 +295,7 @@ static void calibration_wizard_event(int evt)
     switch (evt)
     {
         case CAL_EVT_BACK:
-            lv_scr_load(settings_scr);
+            lv_scr_load(home_scr);
             break;
         case CAL_EVT_PROFILE_1KG:
             scale_service_set_profile(&PROFILE_1KG);
