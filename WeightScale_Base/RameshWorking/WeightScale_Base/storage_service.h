@@ -23,6 +23,17 @@ uint32_t storage_get_record_count(void);
 uint8_t storage_get_last_records(invoice_record_t *out, uint8_t max);
 void storage_check_new_day_and_reset(void);
 void storage_clear_all_records(void);
+uint32_t storage_get_pending_count(void);
+void storage_reset_pending(void);
+void storage_save_dev_mode(bool enabled);
+bool storage_load_dev_mode(void);
+bool storage_update_record(uint32_t index, const invoice_record_t *rec);
+
+/* ===== DEVELOPER LOG STORAGE ===== */
+void storage_save_devlog(const char *text);
+String storage_load_devlog(void);
+void storage_clear_devlog(void);
+
 /* ===== DEVICE NAME STORAGE ===== */
 
 void storage_save_device_name(const char *name);

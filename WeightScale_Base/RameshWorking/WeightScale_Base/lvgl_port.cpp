@@ -1,6 +1,7 @@
 #include "lvgl_port.h"
 #include "gfx_conf.h"
 #include "esp_heap_caps.h"
+#include "devlog.h"
 
 static void touch_read(lv_indev_drv_t *drv, lv_indev_data_t *data);
 
@@ -48,17 +49,18 @@ void lvgl_port_init(void)
     tft.begin();    // then display
 
     buf1 = (lv_color_t *)heap_caps_malloc(
-        screenWidth * 60 * sizeof(lv_color_t),
+        screenWidth * 30 * sizeof(lv_color_t),
         MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT
     );
 
     buf2 = (lv_color_t *)heap_caps_malloc(
-        screenWidth * 60 * sizeof(lv_color_t),
+        screenWidth * 30 * sizeof(lv_color_t),
         MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT
     );
 
     if (!buf1 || !buf2) {
         Serial.println("LVGL buffer allocation failed");
+        devlog_printf("LVGL buffer allocation failed");
         while (1);
     }
 
@@ -66,7 +68,7 @@ void lvgl_port_init(void)
         &draw_buf,
         buf1,
         buf2,
-        screenWidth * 60
+        screenWidth * 30
     );
 
     static lv_disp_drv_t disp_drv;
@@ -86,6 +88,7 @@ void lvgl_port_init(void)
     last_tick = millis();
 
     Serial.println("[LVGL] Port initialized OK");
+    devlog_printf("[LVGL] Port initialized OK");
 }
 
 /* =============================

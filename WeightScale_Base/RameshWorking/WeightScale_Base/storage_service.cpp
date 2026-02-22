@@ -116,6 +116,57 @@ uint32_t storage_get_record_count(void)
     return prefs.getUInt("rec_count", 0);
 }
 
+uint32_t storage_get_pending_count(void)
+{
+    return prefs.getUInt("pending", 0);
+}
+
+void storage_reset_pending(void)
+{
+    prefs.putUInt("pending", 0);
+}
+
+bool storage_update_record(uint32_t index, const invoice_record_t *rec)
+{
+    uint32_t count = storage_get_record_count();
+    if(index >= count) return false;
+
+    char key[16];
+    snprintf(key, sizeof(key), "rec_%lu", index);
+    prefs.putBytes(key, rec, sizeof(invoice_record_t));
+    return true;
+}
+
+void storage_save_dev_mode(bool enabled)
+{
+    prefs.putBool("dev_mode", enabled);
+}
+
+bool storage_load_dev_mode(void)
+{
+    return prefs.getBool("dev_mode", false);
+}
+
+/* =========================================================
+   DEVELOPER LOG STORAGE (persistent across reboots)
+=========================================================*/
+
+void storage_save_devlog(const char *text)
+{
+    if(!text) return;
+    prefs.putString("devlog", text);
+}
+
+String storage_load_devlog(void)
+{
+    return prefs.getString("devlog", "");
+}
+
+void storage_clear_devlog(void)
+{
+    prefs.remove("devlog");
+}
+
 /* =========================================================
    DEVICE NAME STORAGE
 =========================================================*/

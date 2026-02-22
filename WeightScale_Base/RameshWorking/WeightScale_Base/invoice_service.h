@@ -14,6 +14,7 @@ typedef struct {
     float total_weight;
     uint32_t timestamp;
     entry_type_t type;
+    uint8_t synced; /* 0 = pending, 1 = synced */
 } invoice_record_t;
 
 void invoice_service_init(void);

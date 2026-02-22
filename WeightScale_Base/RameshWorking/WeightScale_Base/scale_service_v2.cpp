@@ -145,3 +145,15 @@ const scale_profile_t* scale_service_get_profile()
 {
     return &activeProfile;
 }
+
+void scale_service_suspend(void)
+{
+    if(scaleTaskHandle)
+        vTaskSuspend(scaleTaskHandle);
+}
+
+void scale_service_resume(void)
+{
+    if(scaleTaskHandle)
+        vTaskResume(scaleTaskHandle);
+}

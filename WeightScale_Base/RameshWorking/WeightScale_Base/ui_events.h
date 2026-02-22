@@ -9,3 +9,6 @@ enum {
     UI_EVT_SAVE,
     UI_EVT_RESET_ALL
 };
+
+/* Remove item events: UI_EVT_REMOVE_ITEM_BASE + index */
+#define UI_EVT_REMOVE_ITEM_BASE 3000

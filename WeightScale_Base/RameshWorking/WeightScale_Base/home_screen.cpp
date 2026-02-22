@@ -10,6 +10,7 @@ static lv_obj_t *lbl_device;
 static lv_obj_t *lbl_sync;
 
 static lv_obj_t *item_labels[MAX_INVOICE_ITEMS];
+static lv_obj_t *item_delete_btns[MAX_INVOICE_ITEMS];
 
 static void (*event_cb)(int evt) = NULL;
 
@@ -18,6 +19,21 @@ static void btn_event_cb(lv_event_t *e)
     if(!event_cb) return;
     uintptr_t id = (uintptr_t)lv_event_get_user_data(e);
     event_cb((int)id);
+}
+
+static void delete_event_cb(lv_event_t *e)
+{
+    /* Find which delete button was pressed */
+    lv_obj_t *t = lv_event_get_target(e);
+    for(int i=0;i<MAX_INVOICE_ITEMS;i++)
+    {
+        if(item_delete_btns[i] && item_delete_btns[i] == t)
+        {
+            invoice_session_remove((uint8_t)i);
+            home_screen_refresh_invoice_details();
+            break;
+        }
+    }
 }
 
 void home_screen_register_callback(void (*cb)(int evt))
@@ -171,6 +187,12 @@ void home_screen_create(lv_obj_t *parent)
 
         item_labels[i] = lv_label_create(row);
         lv_obj_align(item_labels[i],LV_ALIGN_LEFT_MID,10,0);
+        /* delete button */
+        item_delete_btns[i] = lv_btn_create(row);
+        lv_obj_set_size(item_delete_btns[i],50,30);
+        lv_obj_align(item_delete_btns[i],LV_ALIGN_RIGHT_MID,-10,0);
+        lv_label_set_text(lv_label_create(item_delete_btns[i]),"DEL");
+        lv_obj_add_event_cb(item_delete_btns[i], delete_event_cb, LV_EVENT_CLICKED, NULL);
     }
 }
 

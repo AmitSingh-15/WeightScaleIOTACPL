@@ -59,15 +59,17 @@ void history_screen_refresh(void)
     {
         if(storage_get_record_by_index(i, &rec))
         {
-            char buf[128];
+            char buf[160];
+            const char *sync_txt = rec.synced ? "Synced" : "Pending";
             snprintf(buf,sizeof(buf),
-                     "Inv#%lu | %.3f kg x%d | Total %.3f kg",
+                     "Inv#%lu | %.3f kg x%d | Total %.3f kg [%s]",
                      rec.invoice_id,
                      rec.weight,
                      rec.quantity,
-                     rec.total_weight);
+                     rec.total_weight,
+                     sync_txt);
 
-            lv_list_add_text(list,buf);
+            lv_list_add_text(list, buf);
         }
     }
 }

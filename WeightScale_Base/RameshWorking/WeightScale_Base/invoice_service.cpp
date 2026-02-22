@@ -48,6 +48,7 @@ bool invoice_service_save(float weight,
     rec.total_weight = weight * quantity;
     rec.timestamp    = time_service_now();
     rec.type         = type;
+    rec.synced       = 0;
 
     if (!storage_enqueue_record(&rec)) {
         return false;

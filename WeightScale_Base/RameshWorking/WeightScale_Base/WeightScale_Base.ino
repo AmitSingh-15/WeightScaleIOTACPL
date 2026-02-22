@@ -24,6 +24,8 @@
 #include "ui_styles.h"
 #include "device_name_screen.h"
 #include "history_screen.h"
+#include "sync_service.h"
+#include "devlog.h"
 
 
 /* =========================================================
@@ -202,6 +204,14 @@ static void ui_event(int evt)
         home_screen_set_quantity(qty);
     }
 
+    /* Handle remove-item events encoded as base + index */
+    if(evt >= UI_EVT_REMOVE_ITEM_BASE && evt < UI_EVT_REMOVE_ITEM_BASE + MAX_INVOICE_ITEMS)
+    {
+        int idx = evt - UI_EVT_REMOVE_ITEM_BASE;
+        invoice_session_remove((uint8_t)idx);
+        home_screen_refresh_invoice_details();
+    }
+
     if (evt == UI_EVT_SAVE)
     {
         if(invoice_session_add(weight, qty))
@@ -266,6 +276,7 @@ static void ui_event(int evt)
 static void open_calibration()
 {
     Serial.println("[CAL] Open calibration screen");
+    devlog_printf("[CAL] Open calibration screen");
     lv_scr_load(cal_scr);
 }
 
@@ -277,8 +288,8 @@ static void back_cb(void)
 static void device_name_saved(int evt, const char *name)
 {
     if(evt != DEVNAME_EVT_SAVE) return;
-
     Serial.printf("[DEV] Saved: %s\n", name);
+    devlog_printf("[DEV] Saved: %s", name);
 
     storage_save_device_name(name);
 
@@ -312,14 +323,17 @@ static void calibration_wizard_event(int evt)
         case CAL_EVT_CAPTURE_ZERO:
             scale_service_tare();
             Serial.println("[CAL] Tare");
+            devlog_printf("[CAL] Tare");
             break;
 
         case CAL_EVT_CAPTURE_LOAD:
             Serial.println("[CAL] Capture load (TODO)");
+            devlog_printf("[CAL] Capture load (TODO)");
             break;
 
         case CAL_EVT_SAVE:
             Serial.println("[CAL] Save calibration (TODO)");
+            devlog_printf("[CAL] Save calibration (TODO)");
             break;
     }
 }
@@ -332,12 +346,14 @@ static void calibration_wizard_event(int evt)
 static void calib_offset()
 {
     Serial.println("[CAL] OFFSET (tare)");
+    devlog_printf("[CAL] OFFSET (tare)");
     scale_service_tare();
 }
 
 static void calib_scale()
 {
     Serial.println("[CAL] SCALE requested");
+    devlog_printf("[CAL] SCALE requested");
 }
 
 static void calib_both()
@@ -389,12 +405,23 @@ void setup()
     delay(500);
 
     Serial.println("=== INDUSTRIAL SCALE START ===");
+    devlog_printf("=== INDUSTRIAL SCALE START ===");
 
     lvgl_port_init();
 
     ui_styles_init();
     storage_service_init();
+    devlog_init();
+    
+    /* Load saved logs from previous session */
+    devlog_load_from_storage();
+    
+    if(storage_load_dev_mode())
+    {
+        devlog_printf("[SYSTEM] Developer mode enabled at boot");
+    }
     invoice_service_init();
+    sync_service_init();
     wifi_service_init();
     ota_service_init();
     invoice_session_init();
@@ -433,12 +460,14 @@ void setup()
     if(storage_load_device_name(device_name,sizeof(device_name)))
     {
         Serial.println("[DEVICE] Existing name found");
+        devlog_printf("[DEVICE] Existing name found");
         home_screen_set_device(device_name);
         lv_scr_load(home_scr);
     }
     else
     {
         Serial.println("[DEVICE] First boot — asking name");
+        devlog_printf("[DEVICE] First boot — asking name");
         lv_scr_load(device_scr);
     }
     history_scr = lv_obj_create(NULL);
@@ -454,14 +483,16 @@ void setup()
 
 void loop()
 {
-    if(!wifi_critical_section)
-    {
-        lvgl_port_loop();
-    }
+    lvgl_port_loop();
 
     update_weight();
 
     wifi_service_loop();
+    sync_service_loop();
+    if(lv_scr_act() == settings_scr)
+    {
+        settings_screen_update_wifi_status();
+    }
     invoice_service_daily_reset_if_needed();
     storage_check_new_day_and_reset();
 
