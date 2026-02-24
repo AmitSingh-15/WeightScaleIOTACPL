@@ -17,6 +17,13 @@ static void (*calibration_cb)(void) = NULL;
 static lv_obj_t *settings_scr_ref = NULL;
 static lv_obj_t *wifi_list_scr = NULL;
 
+/* WiFi state change callback */
+static void wifi_state_cb(wifi_state_t s)
+{
+    if(lv_scr_act() == settings_scr_ref)
+        settings_screen_update_wifi_status();
+}
+
 /* ================= CONNECTING OVERLAY ================= */
 
 static lv_obj_t *connecting_overlay = NULL;
@@ -219,6 +226,9 @@ void settings_screen_create(lv_obj_t *parent)
             NULL
         );
     }
+
+    // Register for wifi state updates so the label updates immediately
+    wifi_service_register_state_callback(wifi_state_cb);
 }
 
 /* ================= STATUS UPDATE ================= */
@@ -246,5 +256,15 @@ void settings_screen_update_wifi_status(void)
     {
         lv_label_set_text(wifi_status, "Wi-Fi: Offline");
         hide_connecting_overlay();
+    }
+}
+
+// ⭐ NEW: Show settings screen
+void settings_screen_show(void)
+{
+    if(settings_scr_ref)
+    {
+        settings_screen_update_wifi_status();
+        lv_scr_load(settings_scr_ref);
     }
 }

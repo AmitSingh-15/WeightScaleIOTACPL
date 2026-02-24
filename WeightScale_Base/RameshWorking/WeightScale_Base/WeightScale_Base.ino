@@ -486,7 +486,6 @@ void loop()
     lvgl_port_loop();
 
     update_weight();
-
     wifi_service_loop();
     sync_service_loop();
     if(lv_scr_act() == settings_scr)

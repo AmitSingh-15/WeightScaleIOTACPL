@@ -1,179 +1,186 @@
 #include <lvgl.h>
-#include <string.h>
-#include <ctype.h>
 #include "ui_styles.h"
 #include "wifi_service.h"
+#include "wifi_list_screen.h"
 #include "devlog.h"
 
-/* external critical flag */
-extern bool wifi_critical_section;
+static char saved_password[65] = {0};
 
-static lv_obj_t *popup_scr = NULL;
-static lv_obj_t *ta = NULL;
-static char selected_ssid[33] = {0};
+struct wifi_popup_t {
+    lv_obj_t *scr;
+    lv_obj_t *ta;
+    lv_obj_t *kb;
 
-static bool caps_enabled = true;
+    lv_timer_t *connect_delay_timer;
+    lv_timer_t *result_timer;
 
-/* Button text storage to keep pointers valid */
-static char key_texts[50][16] = {0};
+    bool destroyed;
 
+    char ssid[33];
+};
 
-/* ================= SAFE CLOSE ================= */
+/* =======================================================
+   SAFE DESTROY (ALWAYS ASYNC)
+======================================================= */
 
-static void close_async(void *p)
+static void wifi_popup_destroy_async(void *p)
 {
-    if(popup_scr && lv_obj_is_valid(popup_scr))
-        lv_obj_del(popup_scr);
+    wifi_popup_t *wp = (wifi_popup_t*)p;
+    if(!wp) return;
 
-    devlog_printf("[WIFIPOP] popup closed");
+    if(wp->destroyed) return;
+    wp->destroyed = true;
 
-    popup_scr = NULL;
+    if(wp->connect_delay_timer)
+        lv_timer_del(wp->connect_delay_timer);
+
+    if(wp->result_timer)
+        lv_timer_del(wp->result_timer);
+
+    if(wp->scr && lv_obj_is_valid(wp->scr))
+        lv_obj_del(wp->scr);
+
+    wifi_service_set_debug_label(NULL);
+
+    delete wp;
 }
 
-/* ================= KEY EVENT ================= */
+/* =======================================================
+   CHECK CONNECTION RESULT
+======================================================= */
 
-static void key_event(lv_event_t *e)
+static void wifi_check_result(lv_timer_t *t)
 {
-    const char *txt = (const char*)lv_event_get_user_data(e);
-    if(!txt || !ta) return;
-
-    if(strcmp(txt, "BACK") == 0)
-    {
-        lv_textarea_del_char(ta);
+    wifi_popup_t *wp = (wifi_popup_t*)t->user_data;
+    if(!wp || wp->destroyed) {
+        lv_timer_del(t);
         return;
     }
 
-    if(strcmp(txt, "ENTER") == 0)
+    wp->result_timer = NULL;
+    lv_timer_del(t);
+
+    if(wifi_service_state() == WIFI_CONNECTED)
     {
-        const char *pwd = lv_textarea_get_text(ta);
-
-        if(pwd && pwd[0])
-        {
-            devlog_printf("[WIFIPOP] ENTER pressed for SSID='%s' pwd_len=%u", selected_ssid, (unsigned)strlen(pwd));
-            wifi_service_connect(selected_ssid, pwd);
-        }
-
-        lv_async_call(close_async, NULL);
-        return;
+        devlog_printf("[WIFI POPUP] Connected OK");
+        lv_async_call(wifi_popup_destroy_async, wp);
+        wifi_list_screen_show();
     }
-
-    if(strcmp(txt, "CANCEL") == 0)
-    {
-        devlog_printf("[WIFIPOP] Cancel pressed");
-        lv_async_call(close_async, NULL);
-        return;
-    }
-
-    if(strcmp(txt, "CAPS") == 0)
-    {
-        caps_enabled = !caps_enabled;
-        return;
-    }
-
-    /* LETTER OR SYMBOL INPUT */
-
-    char buffer[2] = {0};
-
-    if(strlen(txt) == 1 && isalpha(txt[0]))
-        buffer[0] = caps_enabled ? toupper(txt[0]) : tolower(txt[0]);
     else
-        buffer[0] = txt[0];
-
-    lv_textarea_add_text(ta, buffer);
+    {
+        devlog_printf("[WIFI POPUP] Connection failed");
+        lv_async_call(wifi_popup_destroy_async, wp);
+        wifi_list_screen_show();
+    }
 }
 
-/* ================= CREATE BUTTON ================= */
+/* =======================================================
+   KEYBOARD EVENT
+======================================================= */
 
-static void create_key(lv_obj_t *parent,
-                       const char *txt,
-                       int x,int y,int w,int h,
-                       int key_index)
+static void wifi_popup_kb_event(lv_event_t *e)
 {
-    lv_obj_t *btn = lv_btn_create(parent);
-    lv_obj_set_size(btn, w, h);
-    lv_obj_set_pos(btn, x, y);
-    lv_obj_add_style(btn, &g_styles.btn_secondary, 0);
+    lv_event_code_t code = lv_event_get_code(e);
+    wifi_popup_t *wp = (wifi_popup_t*)lv_event_get_user_data(e);
 
-    /* Store text in persistent static buffer */
-    if(key_index < 50)
+    if(!wp || wp->destroyed) return;
+
+    if(code == LV_EVENT_READY)
     {
-        strncpy(key_texts[key_index], txt, sizeof(key_texts[0])-1);
-        key_texts[key_index][sizeof(key_texts[0])-1] = 0;
-        
-        lv_obj_add_event_cb(btn, key_event,
-                            LV_EVENT_RELEASED,
-                            (void*)key_texts[key_index]);
+        strncpy(saved_password,
+                lv_textarea_get_text(wp->ta),
+                sizeof(saved_password));
+        saved_password[sizeof(saved_password)-1] = 0;
+
+        devlog_printf("[WIFI POPUP] Password entered for %s", wp->ssid);
+
+        lv_obj_t *debug_label = lv_label_create(wp->scr);
+        lv_label_set_text(debug_label, "Connecting...");
+        lv_obj_align(debug_label, LV_ALIGN_BOTTOM_MID, 0, -20);
+
+        wifi_service_set_debug_label(debug_label);
+
+        wp->connect_delay_timer =
+            lv_timer_create(
+                [](lv_timer_t *t)
+                {
+                    wifi_popup_t *wp_timer =
+                        (wifi_popup_t*)t->user_data;
+
+                    if(!wp_timer || wp_timer->destroyed)
+                    {
+                        lv_timer_del(t);
+                        return;
+                    }
+
+                    wp_timer->connect_delay_timer = NULL;
+                    lv_timer_del(t);
+
+                    wifi_service_connect(
+                        wp_timer->ssid,
+                        saved_password
+                    );
+
+                    wp_timer->result_timer =
+                        lv_timer_create(
+                            wifi_check_result,
+                            8000,
+                            wp_timer
+                        );
+                },
+                300,
+                wp
+            );
     }
 
-    lv_label_set_text(lv_label_create(btn), txt);
+    if(code == LV_EVENT_CANCEL)
+    {
+        devlog_printf("[WIFI POPUP] Cancel pressed");
+        lv_async_call(wifi_popup_destroy_async, wp);
+        wifi_list_screen_show();
+    }
 }
 
-/* ================= SHOW POPUP ================= */
+/* =======================================================
+   SHOW POPUP
+======================================================= */
 
 void wifi_password_popup_show(const char *ssid)
 {
     if(!ssid) return;
 
-    caps_enabled = true;
+    wifi_popup_t *wp = new wifi_popup_t();
+    memset(wp, 0, sizeof(wifi_popup_t));
 
-    strncpy(selected_ssid, ssid, sizeof(selected_ssid)-1);
-    selected_ssid[sizeof(selected_ssid)-1] = 0;
-    devlog_printf("[WIFIPOP] Showing password popup for SSID='%s'", selected_ssid);
+    strncpy(wp->ssid, ssid, sizeof(wp->ssid));
+    wp->ssid[sizeof(wp->ssid)-1] = 0;
 
-    popup_scr = lv_obj_create(NULL);
-    lv_obj_add_style(popup_scr, &g_styles.screen, 0);
-    lv_obj_set_size(popup_scr, 800, 480);
+    wp->scr = lv_obj_create(NULL);
+    lv_obj_add_style(wp->scr, &g_styles.screen, 0);
 
-    lv_obj_t *title = lv_label_create(popup_scr);
-    lv_label_set_text(title, "Enter WiFi Password");
-    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 10);
+    lv_obj_t *title = lv_label_create(wp->scr);
+    static char buf[64];
+    snprintf(buf, sizeof(buf),
+             "Password for %s", wp->ssid);
+    lv_label_set_text(title, buf);
+    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 20);
 
-    ta = lv_textarea_create(popup_scr);
-    lv_obj_set_width(ta, 600);
-    lv_textarea_set_password_mode(ta, true);
-    lv_textarea_set_one_line(ta, true);
-    lv_textarea_set_max_length(ta, 63);
-    lv_obj_align(ta, LV_ALIGN_TOP_MID, 0, 50);
+    wp->ta = lv_textarea_create(wp->scr);
+    lv_textarea_set_password_mode(wp->ta, true);
+    lv_textarea_set_one_line(wp->ta, true);
+    lv_obj_set_width(wp->ta, 520);
+    lv_obj_align(wp->ta, LV_ALIGN_TOP_MID, 0, 80);
 
-    int start_x = 20;
-    int start_y = 110;
-    int key_w = 55;
-    int key_h = 45;
-    int gap = 5;
+    wp->kb = lv_keyboard_create(wp->scr);
+    lv_keyboard_set_textarea(wp->kb, wp->ta);
+    lv_obj_align(wp->kb, LV_ALIGN_BOTTOM_MID, 0, 0);
 
-    const char *keys[] = {
-        "A","B","C","D","E","F","G","H","I","J",
-        "K","L","M","N","O","P","Q","R","S","T",
-        "U","V","W","X","Y","Z",
-        "0","1","2","3","4","5","6","7","8","9",
-        "@","!","#"
-    };
+    lv_obj_add_event_cb(
+        wp->kb,
+        wifi_popup_kb_event,
+        LV_EVENT_ALL,
+        wp
+    );
 
-    int total = sizeof(keys)/sizeof(keys[0]);
-    int col = 0, row = 0;
-    int key_index = 0;
-
-    for(int i=0;i<total;i++)
-    {
-        int x = start_x + col*(key_w+gap);
-        int y = start_y + row*(key_h+gap);
-
-        create_key(popup_scr, keys[i], x, y, key_w, key_h, key_index++);
-
-        col++;
-        if(col >= 10)
-        {
-            col = 0;
-            row++;
-        }
-    }
-
-    int ctrl_y = start_y + 5*(key_h+gap);
-
-    create_key(popup_scr,"CAPS",20,ctrl_y,100,50,key_index++);
-    create_key(popup_scr,"BACK",130,ctrl_y,100,50,key_index++);
-    create_key(popup_scr,"CANCEL",240,ctrl_y,100,50,key_index++);
-    create_key(popup_scr,"ENTER",350,ctrl_y,120,50,key_index++);
-
-    lv_scr_load(popup_scr);
+    lv_scr_load(wp->scr);
 }

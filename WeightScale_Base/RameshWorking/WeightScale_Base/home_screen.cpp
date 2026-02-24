@@ -2,6 +2,7 @@
 #include "ui_styles.h"
 #include "ui_events.h"
 #include "invoice_session_service.h"
+#include "wifi_service.h"
 
 static lv_obj_t *lbl_weight;
 static lv_obj_t *lbl_qty;
@@ -178,6 +179,11 @@ void home_screen_create(lv_obj_t *parent)
     lv_obj_align(right,LV_ALIGN_RIGHT_MID,0,0);
 
     lv_label_set_text(lv_label_create(right),"Invoice Items");
+
+    // Register to receive WiFi state changes to update the sync label
+    wifi_service_register_state_callback([](wifi_state_t s){
+        home_screen_set_sync_status(s == WIFI_CONNECTED ? "Online" : "Offline");
+    });
 
     for(int i=0;i<MAX_INVOICE_ITEMS;i++)
     {
